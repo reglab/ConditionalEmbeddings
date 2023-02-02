@@ -1,30 +1,17 @@
 import numpy as np
 import os
 import time
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
-# import spacy
-import argparse
+import click
 import json
 import re
+from pathlib import Path
 
-# nlp = spacy.load('en')
+import tqdm
 
 
 def process(text):
-    """
-    processed = []
-    for i in nlp(text):
-        if i.pos_ in ['SPACE', 'PUNCT']:
-            continue
-        elif i.pos_ == 'PART':
-            processed.append('_s')
-        elif i.pos_ in ['NUM', 'SYM']:
-            processed.append(i.pos_)
-        else:
-            processed.append(i.text)
-    """
-
     processed = (
         re.sub(r"[^a-zA-Z ]", r" ", text.replace("-\n", "").replace("\n", " "))
         .lower()
@@ -33,41 +20,43 @@ def process(text):
     return processed
 
 
-def main(args):
-
-    vocab0 = OrderedDict()
+@click.command()
+@click.option(
+    "--source_dir", type=click.Path(exists=True), default="data/COHA/COHA_json"
+)
+@click.option("--saveto_dir", type=click.Path(), default="data/COHA/COHA_processed")
+@click.option("--window", type=int, default=7)
+@click.option("--save_label", type=str, default="coha")
+def main(source_dir: str, saveto_dir: str, window: int, save_label: str):
+    vocab0 = defaultdict(int)
     start = time.time()
 
-    all_files = [x for x in os.listdir(args.source) if ".json" in x]
-    print(all_files)
+    source_dir = Path(source_dir)
+    saveto_dir = Path(saveto_dir)
+    saveto_dir.mkdir(parents=True, exist_ok=True)
+    jsonl_doc_paths = [x for x in source_dir.glob("*.json") if x.is_file()]
 
-    with open("%s%s.txt" % (args.saveto, args.save_label), "w") as f:
-        print("loding all files...")
+    with open(os.path.join(saveto_dir, f"{save_label}.txt"), "w") as f:
+        print(f"Loading {len(jsonl_doc_paths)} files")
 
-        for file_name in all_files:
-            print(file_name)
-
-            file = open(args.source + file_name)
-            for line in file:
-                d = json.loads(line)
-                text = d["text"]
-                if text != None:
+        for file_path in tqdm.tqdm(jsonl_doc_paths):
+            with open(file_path, "r") as file:
+                for line in file:
+                    d = json.loads(line)
+                    text = d["text"]
+                    if text is None:
+                        continue
                     label = d["filedate"][:3]
 
                     words = process(text)
-                    if len(words) < args.window:
+                    if len(words) < window:
                         continue
 
                     f.write(label + "\t")
                     for w in words:
                         f.write(w + " ")
-                        if w in vocab0:
-                            vocab0[w] += 1
-                        else:
-                            vocab0[w] = 1
+                        vocab0[w] += 1
                     f.write("\n")
-            print("%s seconds elapsed" % (time.time() - start))
-    f.close()
 
     tokens = list(vocab0.keys())
 
@@ -78,17 +67,9 @@ def main(args):
 
     # vocab_f = OrderedDict({k: (vocab0[k]/total_words)**(3/4) for k in vocab.keys()})
 
-    np.save(args.saveto + "vocab_f" + args.save_label + ".npy", vocab0)
-    np.save(args.saveto + "vocab" + args.save_label + ".npy", vocab)
+    np.save(str(saveto_dir / f"vocab_f{save_label}.npy"), vocab0)
+    np.save(str(saveto_dir / f"vocab{save_label}.npy"), vocab)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-source", type=str, default="")
-    parser.add_argument("-saveto", type=str, default="")
-    parser.add_argument("-text", type=str, default="")
-    parser.add_argument("-window", type=int, default=7)
-    parser.add_argument("-save_label", type=str, default="")
-
-    args = parser.parse_args()
-    main(args)
+    main()

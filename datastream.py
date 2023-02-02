@@ -1,15 +1,6 @@
 import numpy as np
 import torch
-import torch.autograd as autograd
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 from torch.autograd import Variable
-from torch.nn import Parameter
-import math
-from collections import OrderedDict
-import time
-import random
 
 
 class load_data:
