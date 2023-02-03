@@ -7,13 +7,11 @@ class load_data:
     def __init__(self, args):
 
         self.batch_size = args.batch
-        self.data_size = args.data_size
         self.label_map = args.label_map
 
-        self.vocab = np.load(args.source + args.vocab).item()
+        self.vocab = np.load(str(args.vocab), allow_pickle=True).item()
 
-        fname = args.source + args.source_file
-        self.source = open(fname, "r")
+        self.source = open(args.source_file, "r")
 
         self.end_of_data = False
         self.skips = args.skips

@@ -1,24 +1,12 @@
-import numpy as np
 import torch
-import torch.autograd as autograd
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 from torch.autograd import Variable
 from torch.nn import Parameter
-import os
-import math
-from collections import OrderedDict
-import time
-import matplotlib.pyplot as plt
-import argparse
-import random
-import shutil
 
 
-class ConditinalBBP(nn.Module):
+class ConditionalBBP(nn.Module):
     def __init__(self, num_words, embed_size, args, weights=None):
-        super(ConditinalBBP, self).__init__()
+        super(ConditionalBBP, self).__init__()
 
         self.num_words = num_words
         self.embed_size = embed_size

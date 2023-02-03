@@ -10,11 +10,11 @@ import re
 
 def main(args):
 
-    vocab = np.load(args.vocab).item()
+    vocab = np.load(args.vocab, allow_pickle=True).item()
     vocab_freq = OrderedDict([(i, s) for i, s in vocab.items() if s < args.top_K])
     freq_keys = vocab_freq.keys()
 
-    vocab_t = np.load(args.vocab_f).item()
+    vocab_t = np.load(args.vocab_f, allow_pickle=True).item()
     vocab_t_freq = OrderedDict([(k, v) for k, v in vocab_t.items() if k in freq_keys])
     total_words = np.sum(list(vocab_t_freq.values()))
     print(total_words)
@@ -31,14 +31,14 @@ def main(args):
     lines = open(args.source + "%s.txt" % args.save_label, "r")
 
     with open(args.saveto + "%s_freq.txt" % args.save_label, "w") as f:
-        print("loding all files...")
+        print("loading all files...")
 
         for line in lines:
             items = line.strip().split("\t")
             label = items[0][:3]
             text = items[1]
 
-            if text != None:
+            if text is not None:
                 words = text.split(" ")
 
                 f.write(label + "\t")
@@ -50,21 +50,19 @@ def main(args):
                 f.write("\n")
 
     print("%s seconds elapsed" % (time.time() - start))
-    f.close()
 
     np.save(args.saveto + "vocab" + args.save_label + "_freq.npy", vocab_freq)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-source", type=str, default="")
-    parser.add_argument("-saveto", type=str, default="")
-    parser.add_argument("-text", type=str, default="")
-    parser.add_argument("-vocab", type=str, default="")
-    parser.add_argument("-vocab_f", type=str, default="")
+    parser.add_argument("-source", type=str, default="data/COHA/COHA_processed/")
+    parser.add_argument("-saveto", type=str, default="data/COHA/COHA_processed/")
+    parser.add_argument("-vocab", type=str, default="data/COHA/COHA_processed/vocabcoha.npy")
+    parser.add_argument("-vocab_f", type=str, default="data/COHA/COHA_processed/vocab_fcoha.npy")
     parser.add_argument("-window", type=int, default=7)
     parser.add_argument(
-        "-save_label", type=str, default=""
+        "-save_label", type=str, default="coha"
     )  # file name of the saved files
     parser.add_argument("-top_K", type=int, default=25000)
 
