@@ -41,7 +41,7 @@ def main(args):
         )
         print("train %s epochs before, loss is %s" % (epoch, loss))
 
-    for epoch in tqdm(range(args.epochs), desc="Epoch", position=0, leave=True):
+    for epoch in tqdm(range(args.n_epochs), desc="Epoch", position=0, leave=True):
         model.train()
         total_loss = 0
 
@@ -130,5 +130,9 @@ if __name__ == "__main__":
     args.best_model_save_file = args.saveto / f"model_best_{args.file_stamp}.pth.tar"
 
     args.label_map = {str(v): k for k, v in enumerate(range(181, 201))}
+
+    if args.cuda:
+        torch.cuda.manual_seed(args.seed)
+        print("Using CUDA...")
 
     main(args)
