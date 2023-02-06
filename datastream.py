@@ -5,6 +5,8 @@ from torch.autograd import Variable
 
 class load_data:
     def __init__(self, args):
+        with open(args.source_file, "r") as f:
+            self.data_size = len(f.readlines())
 
         self.batch_size = args.batch
         self.label_map = args.label_map
@@ -77,22 +79,16 @@ class load_data:
 
     def create_batch(self, raw_batch, vocab):
 
-        # input                                                                                  \
-
         all_txt = list(zip(*raw_batch))
         idxs = list(map(lambda w: vocab[w], all_txt[1]))
         in_idxs = Variable(
             torch.LongTensor(idxs).view(len(raw_batch), 1), requires_grad=False
         )
 
-        # output                                                                                 \
-
         idxs = list(map(lambda output: [vocab[w] for w in output], all_txt[2]))
         out_idxs = Variable(
             torch.LongTensor(idxs).view(len(raw_batch), -1), requires_grad=False
         )
-
-        # covariates                                                                             \
 
         cvrs = list(map(lambda c: self.label_map[c], all_txt[0]))
         cvrs = Variable(torch.LongTensor(cvrs).view(len(raw_batch), -1))

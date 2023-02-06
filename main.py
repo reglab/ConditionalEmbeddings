@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 
 import torch.optim as optim
+from tqdm import tqdm
 
 from BBP import ConditionalBBP
 from datastream import load_data
@@ -20,10 +21,10 @@ def main(args):
 
     model = ConditionalBBP(n_words, embedding_size, args)
 
-    batch = load_data(args)
+    batch_iterator = load_data(args)
 
-    n_batch = int(np.ceil(args.data_size / batch_size))
-    print(n_batch)
+    n_batch = int(np.ceil(batch_iterator.data_size / batch_size))
+    print(f"total number of batches: {str(n_batch)}")
 
     if args.cuda:
         model.cuda()
@@ -40,19 +41,21 @@ def main(args):
         )
         print("train %s epochs before, loss is %s" % (epoch, loss))
 
-    for epoch in range(args.n_epochs):
+    for epoch in tqdm(range(args.epochs), desc="Epoch", position=0, leave=True):
         model.train()
         total_loss = 0
 
-        for in_v, out_v, cvrs in batch:
-            w = batch_size / args.data_size
+        for in_v, out_v, cvrs in tqdm(
+            batch_iterator, desc="Batch", position=1, leave=False
+        ):
+            w = batch_size / batch_iterator.data_size
 
             if args.cuda:
                 in_v, out_v, cvrs = in_v.cuda(), out_v.cuda(), cvrs.cuda()
 
-            if batch.count % 100000 == 0:
+            if batch_iterator.count % 100000 == 0:
                 print(
-                    f"training epoch {str(epoch)}: completed {str(round(100 * batch.count / args.data_size, 2))} %"
+                    f"training epoch {str(epoch)}: completed {str(round(100 * batch_iterator.count / batch_iterator.data_size, 2))} %"
                 )
 
             model.zero_grad()
@@ -124,10 +127,8 @@ if __name__ == "__main__":
     args.source_file = args.source / f"{args.file_stamp}.txt"
     args.function = "NN"
 
-    args.data_size = 3
-
     args.best_model_save_file = args.saveto / f"model_best_{args.file_stamp}.pth.tar"
 
-    args.label_map = {str(v): k for k, v in enumerate(range(180, 200))}
+    args.label_map = {str(v): k for k, v in enumerate(range(181, 201))}
 
     main(args)

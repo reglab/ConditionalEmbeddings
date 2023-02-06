@@ -1,11 +1,10 @@
 import numpy as np
-import os
 import time
 from collections import OrderedDict
 
 import argparse
-import json
-import re
+
+import tqdm
 
 
 def main(args):
@@ -28,12 +27,12 @@ def main(args):
 
     start = time.time()
 
-    lines = open(args.source + "%s.txt" % args.save_label, "r")
+    lines = [l for l in open(args.source + "%s.txt" % args.save_label, "r")]
 
     with open(args.saveto + "%s_freq.txt" % args.save_label, "w") as f:
         print("loading all files...")
 
-        for line in lines:
+        for line in tqdm.tqdm(lines):
             items = line.strip().split("\t")
             label = items[0][:3]
             text = items[1]
@@ -58,8 +57,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-source", type=str, default="data/COHA/COHA_processed/")
     parser.add_argument("-saveto", type=str, default="data/COHA/COHA_processed/")
-    parser.add_argument("-vocab", type=str, default="data/COHA/COHA_processed/vocabcoha.npy")
-    parser.add_argument("-vocab_f", type=str, default="data/COHA/COHA_processed/vocab_fcoha.npy")
+    parser.add_argument(
+        "-vocab", type=str, default="data/COHA/COHA_processed/vocabcoha.npy"
+    )
+    parser.add_argument(
+        "-vocab_f", type=str, default="data/COHA/COHA_processed/vocab_fcoha.npy"
+    )
     parser.add_argument("-window", type=int, default=7)
     parser.add_argument(
         "-save_label", type=str, default="coha"
