@@ -45,9 +45,13 @@ def main(args):
         model.train()
         total_loss = 0
 
+        i = 0
         for in_v, out_v, cvrs in tqdm(
             batch_iterator, desc="Batch", position=1, leave=False
         ):
+            i += 1
+            if i > 2:
+                break
             w = batch_size / batch_iterator.data_size
 
             if args.cuda:
@@ -101,10 +105,10 @@ if __name__ == "__main__":
     parser.add_argument("-saveto", type=str)
     parser.add_argument("-file_stamp", type=str, default="coha")
     parser.add_argument("-source_file", type=str)
-    parser.add_argument("-best_model_save_file", type=str, default="model_best.pth.tar")
+    parser.add_argument("-best_model_save_file", type=str, default="model_best.pth.250.tar")
     parser.add_argument("-label_map", type=list)
 
-    parser.add_argument("-emb", type=int, default=50)
+    parser.add_argument("-emb", type=int, default=300)
     parser.add_argument("-batch", type=int, default=1)
     parser.add_argument("-n_epochs", type=int, default=1)
     parser.add_argument("-seed", type=int, default=123)
@@ -124,8 +128,8 @@ if __name__ == "__main__":
     args.saveto = Path(__file__).parent / "data" / "COHA" / "results"
     args.saveto.mkdir(parents=True, exist_ok=True)
 
-    args.vocab = args.source / f"vocab{args.file_stamp}.npy"
-    args.source_file = args.source / f"{args.file_stamp}.txt"
+    args.vocab = args.source / f"vocab{args.file_stamp}_freq.npy"
+    args.source_file = args.source / f"{args.file_stamp}_freq.txt"
     args.function = "NN"
 
     args.best_model_save_file = args.saveto / f"model_best_{args.file_stamp}.pth.tar"
