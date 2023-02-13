@@ -51,6 +51,7 @@ def main(args):
             w = batch_size / batch_iterator.data_size
 
             if args.cuda:
+                torch.cuda.empty_cache()
                 in_v, out_v, cvrs = in_v.cuda(), out_v.cuda(), cvrs.cuda()
 
             if batch_iterator.count % 100000 == 0:

@@ -67,7 +67,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-save_label", type=str, default="coha"
     )  # file name of the saved files
-    parser.add_argument("-top_K", type=int, default=25000)
+    parser.add_argument("-top_K", type=int, default=50_000)
 
     args = parser.parse_args()
     main(args)
