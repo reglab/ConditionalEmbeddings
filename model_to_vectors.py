@@ -20,6 +20,9 @@ def load_model(model_path: str, vocab_path: str) -> ConditionalBBP:
     model.word_input_embeddings = {}
     for word, vec in zip(model.vocab.keys(), model.input_embeddings()):
         model.word_input_embeddings[word] = vec
+    model.word_var = {}
+    for word, vec in zip(model.vocab.keys(), model.var_embeddings()):
+        model.word_var[word] = vec
     model.year_covar = {}
     for year, vec in zip(model.label_map.keys(), model.covar_embeddings()):
         model.year_covar[year] = vec
@@ -29,7 +32,7 @@ def load_model(model_path: str, vocab_path: str) -> ConditionalBBP:
 def get_embedding(model: ConditionalBBP, word: str, decade: int) -> torch.Tensor:
     return model.linear(
         torch.cat(
-            [torch.tensor(model.word_em[word]), torch.tensor(model.year_covar[decade])],
+            [torch.tensor(model.word_input_embeddings[word]), torch.tensor(model.year_covar[decade])],
             0,
         )
     )
