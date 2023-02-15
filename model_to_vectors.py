@@ -8,7 +8,6 @@ from tqdm.contrib.concurrent import process_map
 # get_embedding = lambda word, decade: model.linear(torch.cat([torch.tensor(word_em[word]), torch.tensor(year_covar[decade])], 0))
 # get_dev = lambda word: (torch.tensor(word_var[word]).exp() + 1).log()
 
-
 def load_model(model_path: str, vocab_path: str) -> ConditionalBBP:
     torch_model = torch.load(model_path)
     # noinspection PyTypeChecker
@@ -60,6 +59,7 @@ def compute_decade_embeddings(
 
 
 def main():
+    torch.set_grad_enabled(False)
     model = load_model(
         "data/COHA/results/model_best_coha.pth.tar",
         "data/COHA/COHA_processed/vocabcoha_freq.npy",
