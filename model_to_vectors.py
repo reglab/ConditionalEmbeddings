@@ -8,6 +8,7 @@ from tqdm.contrib.concurrent import process_map
 # get_embedding = lambda word, decade: model.linear(torch.cat([torch.tensor(word_em[word]), torch.tensor(year_covar[decade])], 0))
 # get_dev = lambda word: (torch.tensor(word_var[word]).exp() + 1).log()
 
+
 def load_model(model_path: str, vocab_path: str) -> ConditionalBBP:
     torch_model = torch.load(model_path)
     # noinspection PyTypeChecker
@@ -27,31 +28,38 @@ def load_model(model_path: str, vocab_path: str) -> ConditionalBBP:
     return model
 
 
-def get_embedding(model: ConditionalBBP, word: str, decade: int) -> torch.Tensor:
+def get_embedding(model: ConditionalBBP, word: str, decade: int) -> list[float]:
     return model.linear(
         torch.cat(
-            [torch.tensor(model.word_input_embeddings[word]), torch.tensor(model.year_covar[decade])],
+            [
+                torch.tensor(model.word_input_embeddings[word]),
+                torch.tensor(model.year_covar[decade]),
+            ],
             0,
         )
-    )
+    ).tolist()
 
 
-def get_dev(model: ConditionalBBP, word: str) -> torch.Tensor:
-    return (torch.tensor(model.word_var[word]).exp() + 1).log()
+def get_dev(model: ConditionalBBP, word: str) -> list:
+    return (torch.tensor(model.word_var[word]).exp() + 1).log().tolist()
 
 
 def compute_decade_embeddings(
     model: ConditionalBBP, decade: str, output_embedding_path: str
 ):
     all_words = list(model.vocab.keys())
-    # Use process_map to parallelize the computation
-    embeddings = process_map(
-        get_embedding,
-        [model] * len(all_words),
-        all_words,
-        [decade] * len(all_words),
-        chunksize=100,
-    )
+    embeddings = []
+    for word in tqdm.tqdm(all_words, desc="Word", position=2):
+        embeddings.append(get_embedding(model, word, decade))
+    # embeddings = list(
+    #     map(
+    #         get_embedding,
+    #         [model] * len(all_words),
+    #         tqdm.tqdm(all_words),
+    #         [decade] * len(all_words),
+    #         # chunksize=100,
+    #     )
+    # )
     # Write out in w2v format
     with open(output_embedding_path, "w") as f:
         for word, embedding in zip(all_words, embeddings):
@@ -70,7 +78,17 @@ def main():
             model, decade, f"data/COHA/results/decade_embeddings_{decade}.txt"
         )
     all_words = list(model.vocab.keys())
-    dev_vectors = process_map(get_dev, [model] * len(all_words), all_words, chunksize=100)
+    dev_vectors = []
+    for word in tqdm.tqdm(all_words, desc="Word", position=2):
+        dev_vectors.append(get_dev(model, word))
+    # dev_vectors = list(
+    #     map(
+    #         get_dev,
+    #         [model] * len(all_words),
+    #         tqdm.tqdm(all_words),
+    #         # chunksize=100,
+    #     )
+    # )
     with open("data/COHA/results/dev_vectors.txt", "w") as f:
         for word, dev in zip(all_words, dev_vectors):
             f.write(f"{word} {' '.join(map(str, dev))}\n")
