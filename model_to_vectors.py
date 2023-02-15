@@ -72,3 +72,7 @@ def main():
     with open("data/COHA/results/dev_vectors.txt", "w") as f:
         for word, dev in zip(all_words, dev_vectors):
             f.write(f"{word} {' '.join(map(str, dev))}\n")
+
+
+if __name__ == "__main__":
+    main()
