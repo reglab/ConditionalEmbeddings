@@ -1,6 +1,5 @@
 from BBP import ConditionalBBP
 
-import itertools
 import numpy as np
 import torch
 import tqdm
@@ -49,9 +48,9 @@ def compute_decade_embeddings(
     # Use process_map to parallelize the computation
     embeddings = process_map(
         get_embedding,
-        itertools.repeat(model),
+        [model] * len(all_words),
         all_words,
-        itertools.repeat(decade),
+        [decade] * len(all_words),
         chunksize=100,
     )
     # Write out in w2v format
@@ -71,7 +70,7 @@ def main():
             model, decade, f"data/COHA/results/decade_embeddings_{decade}.txt"
         )
     all_words = list(model.vocab.keys())
-    dev_vectors = process_map(get_dev, itertools.repeat(model), all_words)
+    dev_vectors = process_map(get_dev, [model] * len(all_words), all_words, chunksize=100)
     with open("data/COHA/results/dev_vectors.txt", "w") as f:
         for word, dev in zip(all_words, dev_vectors):
             f.write(f"{word} {' '.join(map(str, dev))}\n")
