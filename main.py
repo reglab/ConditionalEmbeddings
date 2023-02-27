@@ -122,6 +122,7 @@ if __name__ == "__main__":
     parser.add_argument("-sigma_2", type=float, default=0.2)
     parser.add_argument("-weight_scheme", type=int, default=1)
     parser.add_argument("-load_model", type=float, default=False)
+    parser.add_argument("-initialize", type=str, default='BBB')
     args = parser.parse_args()
 
     args.source = Path(__file__).parent / "data" / "COHA" / "COHA_processed"
@@ -139,5 +140,8 @@ if __name__ == "__main__":
     if args.cuda:
         torch.cuda.manual_seed(args.seed)
         print("Using CUDA...")
+
+    if args.initialize not in ['kaiming', 'word2vec', 'BBB']:
+        raise Exception('[ERROR] Check weight initialization')
 
     main(args)
