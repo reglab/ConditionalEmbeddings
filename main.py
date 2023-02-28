@@ -47,11 +47,11 @@ def main(args):
 
         i = 0
         for in_v, out_v, cvrs in tqdm(
-            batch_iterator, desc="Batch", position=1, leave=False
+            batch_iterator, desc="Batch", position=1, leave=False, total=batch_size
         ):
             i += 1
-            if i > 2:
-                break
+            # if i > 2:
+            #     break
             w = batch_size / batch_iterator.data_size
 
             if args.cuda:
