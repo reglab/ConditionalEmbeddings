@@ -52,14 +52,14 @@ class ConditionalBBP(nn.Module):
             torch.FloatTensor(self.n_labels, self.embed_size).uniform_(-1, 1)
         )
 
-        if args.initialize == 'kaiming':
+        if args.initialize == "kaiming":
             nn.init.kaiming_uniform_(self.out_embed.weight)
             nn.init.kaiming_uniform_(self.in_embed.weight)
             nn.init.kaiming_uniform_(self.out_rho.weight)
             nn.init.kaiming_uniform_(self.in_rho.weight)
             nn.init.kaiming_uniform_(self.covariates.weight)
 
-        if args.initialize == 'word2vec':
+        if args.initialize == "word2vec":
             nn.init.uniform_(self.out_embed.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
             nn.init.uniform_(self.in_embed.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
             nn.init.uniform_(self.out_rho.weight, a=-0.5, b=0.5)

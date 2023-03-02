@@ -67,7 +67,12 @@ def main(args):
             loss = model(in_v, out_v, cvrs, w)
             loss.backward()
             optimizer.step()
-            total_loss += loss.data.cpu().numpy().item()
+            curr_loss = loss.data.cpu().numpy().item()
+            # Check if curr_loss is NaN
+            if curr_loss != curr_loss:
+                print(f"loss is NaN at epoch {str(epoch)} batch {str(i)}, exiting...")
+                exit()
+            total_loss += curr_loss
 
         ave_loss = total_loss / n_batch
         print("average loss is: %s" % str(ave_loss))
