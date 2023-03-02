@@ -47,7 +47,7 @@ def main(args):
 
         i = 0
         for in_v, out_v, cvrs in tqdm(
-            batch_iterator, desc="Batch", position=1, leave=False, total=batch_size
+            batch_iterator, total=batch_iterator.data_size, desc="Batch", position=1, leave=False
         ):
             i += 1
             # if i > 2:

@@ -6,7 +6,7 @@ import os
 import matplotlib
 import matplotlib.pyplot as plt
 
-matplotlib.use('MacOSX')
+matplotlib.use('pdf')
 
 
 def main(args):

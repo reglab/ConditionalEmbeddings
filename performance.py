@@ -10,7 +10,7 @@ from pathlib import Path
 
 import matplotlib
 import matplotlib.pyplot as plt
-matplotlib.use('MacOSX')
+matplotlib.use('pdf')
 
 
 def load_coha_HistWords(input_dir, only_nonzero):
