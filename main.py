@@ -1,4 +1,5 @@
 import argparse
+import csv
 import time
 from pathlib import Path
 
@@ -40,6 +41,10 @@ def main(args):
             model, optimizer, args.best_model_save_file
         )
         print("train %s epochs before, loss is %s" % (epoch, loss))
+    
+    loss_file = open(Path(args.saveto) / "loss.csv", "w")
+    writer = csv.writer(loss_file)
+    writer.writerow(["epoch", "batch", "curr_loss", "total_loss"])
 
     for epoch in tqdm(range(args.n_epochs), desc="Epoch", position=0, leave=True):
         model.train()
@@ -73,6 +78,7 @@ def main(args):
                 print(f"loss is NaN at epoch {str(epoch)} batch {str(i)}, exiting...")
                 exit()
             total_loss += curr_loss
+            writer.writerow([epoch, i, curr_loss, total_loss])
 
         ave_loss = total_loss / n_batch
         print("average loss is: %s" % str(ave_loss))
@@ -99,6 +105,7 @@ def main(args):
             args.best_model_save_file,
         )
 
+    loss_file.close()
     print(losses)
 
 
