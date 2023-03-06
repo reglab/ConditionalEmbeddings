@@ -1,3 +1,4 @@
+import argparse
 from BBP import ConditionalBBP
 
 import numpy as np
@@ -28,7 +29,7 @@ def load_model(model_path: str, vocab_path: str) -> ConditionalBBP:
     return model
 
 
-def get_embedding(model: ConditionalBBP, word: str, decade: int) -> list[float]:
+def get_embedding(model: ConditionalBBP, word: str, decade: int):
     return model.linear(
         torch.cat(
             [
@@ -66,16 +67,16 @@ def compute_decade_embeddings(
             f.write(f"{word} {' '.join(map(str, embedding))}\n")
 
 
-def main():
+def main(args):
     torch.set_grad_enabled(False)
     model = load_model(
-        "data/COHA/results/model_best_coha.pth.tar",
+        f"data/COHA/results/model_best_{args.file_stamp}.pth.tar",
         "data/COHA/COHA_processed/vocabcoha_freq.npy",
     )
     all_decades = list(model.label_map.keys())
     for decade in tqdm.tqdm(all_decades, desc="Decade", position=1):
         compute_decade_embeddings(
-            model, decade, f"data/COHA/results/decade_embeddings_{decade}.txt"
+            model, decade, f"data/COHA/results/decade_embeddings_{args.file_stamp}_{decade}.txt"
         )
     all_words = list(model.vocab.keys())
     dev_vectors = []
@@ -89,10 +90,15 @@ def main():
     #         # chunksize=100,
     #     )
     # )
-    with open("data/COHA/results/dev_vectors.txt", "w") as f:
+    with open(f"data/COHA/results/dev_vectors_{args.file_stamp}.txt", "w") as f:
         for word, dev in zip(all_words, dev_vectors):
             f.write(f"{word} {' '.join(map(str, dev))}\n")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-file_stamp", type=str, required=True)
+
+    args = parser.parse_args()
+
+    main(args)

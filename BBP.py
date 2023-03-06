@@ -167,16 +167,16 @@ class ConditionalBBP(nn.Module):
 
         else:
             noise = Variable(
-                torch.Tensor(batch_size, self.num_sampled)
+                torch.Tensor(batch_size * window_size, self.num_sampled)
                 .uniform_(0, self.num_words - 1)
                 .long()
             )
         if use_cuda:
             noise = noise.cuda()
 
-        noise = self.out_embed(noise).neg().view(-1, self.embed_size)
-
-        log_sampled = (w_in * noise).sum(1).sigmoid().log()
+        noise = self.out_embed(noise).neg()
+        log_sampled = (w_in.unsqueeze(1) * noise).sum(-1).sigmoid().log()
+        log_sampled = log_sampled.mean(-1)
 
         likelihood = log_target + log_sampled
 

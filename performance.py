@@ -43,7 +43,7 @@ def main(args):
     bbb_vecs = {}
     for decade in range(181, 201):
         bbb_vecs[str(decade) + '0'] = gensim.models.KeyedVectors.load_word2vec_format(
-            f"data/COHA/results/decade_embeddings_{decade}.txt", binary=False, no_header=True)
+            f"data/COHA/results/decade_embeddings_{args.file_stamp}_{decade}.txt", binary=False, no_header=True)
 
     # Analogy task
     eval_score = pd.DataFrame()
@@ -118,7 +118,7 @@ def main(args):
     )
     ax.set_ylim(0, 0.6)
     ax.set(xlabel='Negative sampling parameter', ylabel='Accuracy')
-    ax.figure.savefig(args.output_dir / f"analogy.png")
+    ax.figure.savefig(args.output_dir / f"analogy_{args.file_stamp}.png")
 
 
     # Viz Bruni stat
@@ -133,7 +133,7 @@ def main(args):
         ax=ax, x='negative', y='accuracy', hue='decade')
     ax.set_ylim(0, 0.8)
     ax.set(xlabel='Negative sampling parameter', ylabel='Pearson statistic')
-    ax.figure.savefig(args.output_dir / f"bruni.png")
+    ax.figure.savefig(args.output_dir / f"bruni_{args.file_stamp}.png")
 
 
 if __name__ == '__main__':
@@ -143,6 +143,7 @@ if __name__ == '__main__':
     parser.add_argument("-output_dir", type=str)
     parser.add_argument("-histwords_dir", type=str)
     parser.add_argument("-negative", type=int)
+    parser.add_argument("-file_stamp", type=str, required=True)
 
     args = parser.parse_args()
 
