@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from pathlib import Path
+import wandb
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -40,12 +41,14 @@ def load_coha_HistWords(input_dir, only_nonzero):
 
 def main(args):
     # Load vectors
+    print('[INFO] Loading vectors')
     bbb_vecs = {}
     for decade in range(181, 201):
         bbb_vecs[str(decade) + '0'] = gensim.models.KeyedVectors.load_word2vec_format(
-            f"data/COHA/results/decade_embeddings_{args.file_stamp}_{decade}.txt", binary=False, no_header=True)
+            f"data/COHA/results/decade_embeddings_{args.file_stamp}_{args.run_id}_{decade}.txt", binary=False, no_header=True)
 
     # Analogy task
+    print('[INFO] Computing analogy scores')
     eval_score = pd.DataFrame()
     for decade in tqdm(range(1810, 2001, 10)):
         word_vecs = bbb_vecs[str(decade)]
@@ -118,7 +121,7 @@ def main(args):
     )
     ax.set_ylim(0, 0.6)
     ax.set(xlabel='Negative sampling parameter', ylabel='Accuracy')
-    ax.figure.savefig(args.output_dir / f"analogy_{args.file_stamp}.png")
+    ax.figure.savefig(args.output_dir / f"analogy_{args.file_stamp}_{args.run_id}.png")
 
 
     # Viz Bruni stat
@@ -133,7 +136,22 @@ def main(args):
         ax=ax, x='negative', y='accuracy', hue='decade')
     ax.set_ylim(0, 0.8)
     ax.set(xlabel='Negative sampling parameter', ylabel='Pearson statistic')
-    ax.figure.savefig(args.output_dir / f"bruni_{args.file_stamp}.png")
+    ax.figure.savefig(args.output_dir / f"bruni_{args.file_stamp}_{args.run_id}.png")
+
+    # W&B Logging
+    api = wandb.Api()
+    run = api.run(f"adus/bbb-uncertainty/{args.run_id}")
+    wb_analogy = analogy_df.loc[(analogy_df['section'] == 'Total accuracy') & (analogy_df['vectors'] == 'BBB')]
+    wb_bruni = bruni_df.loc[(bruni_df['section'] == 'pearson_stat') & (bruni_df['vectors'] == 'BBB')]
+
+    run.summary['Mean analogy accuracy'] = wb_analogy['accuracy'].mean()
+    run.summary['Mean similarity stat'] = wb_bruni['accuracy'].mean()
+
+    run.summary['Max analogy accuracy'] = wb_analogy['accuracy'].max()
+    run.summary['Max similarity stat'] = wb_bruni['accuracy'].max()
+
+    run.update()
+    run.finish()
 
 
 if __name__ == '__main__':
@@ -144,6 +162,7 @@ if __name__ == '__main__':
     parser.add_argument("-histwords_dir", type=str)
     parser.add_argument("-negative", type=int)
     parser.add_argument("-file_stamp", type=str, required=True)
+    parser.add_argument("-run_id", type=str, required=True)
 
     args = parser.parse_args()
 

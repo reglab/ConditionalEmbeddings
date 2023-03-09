@@ -70,13 +70,13 @@ def compute_decade_embeddings(
 def main(args):
     torch.set_grad_enabled(False)
     model = load_model(
-        f"data/COHA/results/model_best_{args.file_stamp}.pth.tar",
+        f"data/COHA/results/model_best_{args.file_stamp}_{args.run_id}.pth.tar",
         "data/COHA/COHA_processed/vocabcoha_freq.npy",
     )
     all_decades = list(model.label_map.keys())
     for decade in tqdm.tqdm(all_decades, desc="Decade", position=1):
         compute_decade_embeddings(
-            model, decade, f"data/COHA/results/decade_embeddings_{args.file_stamp}_{decade}.txt"
+            model, decade, f"data/COHA/results/decade_embeddings_{args.file_stamp}_{args.run_id}_{decade}.txt"
         )
     all_words = list(model.vocab.keys())
     dev_vectors = []
@@ -90,7 +90,7 @@ def main(args):
     #         # chunksize=100,
     #     )
     # )
-    with open(f"data/COHA/results/dev_vectors_{args.file_stamp}.txt", "w") as f:
+    with open(f"data/COHA/results/dev_vectors_{args.file_stamp}_{args.run_id}.txt", "w") as f:
         for word, dev in zip(all_words, dev_vectors):
             f.write(f"{word} {' '.join(map(str, dev))}\n")
 
@@ -98,6 +98,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-file_stamp", type=str, required=True)
+    parser.add_argument("-run_id", type=str, required=True)
 
     args = parser.parse_args()
 
