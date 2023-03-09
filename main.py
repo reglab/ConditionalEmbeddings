@@ -54,7 +54,7 @@ def main(args):
         name=args.run_id,
         id=args.run_id
     )
-    wandb.watch(model)
+    wandb.watch(model, log="all")
 
     for epoch in tqdm(range(args.n_epochs), desc="Epoch", position=0, leave=True):
         model.train()
@@ -65,8 +65,8 @@ def main(args):
             batch_iterator, total=batch_iterator.data_size, desc="Batch", position=1, leave=False
         ):
             i += 1
-            if i > 20:
-                 break
+            #if i > 2:
+            #     break
             w = batch_size / batch_iterator.data_size
 
             if args.cuda:
