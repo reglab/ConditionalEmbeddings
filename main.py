@@ -31,7 +31,8 @@ def main(args):
     if args.cuda:
         model.cuda()
 
-    optimizer = optim.Adagrad(model.parameters(), lr=args.lr)
+    optimizers = {'adam': optim.Adam, 'adagrad': optim.Adagrad, 'sparse_adam': optim.SparseAdam}
+    optimizer = optimizers[args.optim](model.parameters(), lr=args.lr)
     losses = []
 
     print("start training model...\n")
@@ -146,6 +147,7 @@ if __name__ == "__main__":
     parser.add_argument("-skips", type=int, default=3)
     parser.add_argument("-negs", type=int, default=6)
     parser.add_argument("-initialize", type=str, default='BBB')
+    parser.add_argument("-optim", type=str, default='adagrad', choices=['adagrad', 'adam', 'sparse_adam'])
     #parser.add_argument("-window", type=int, default=7)
 
     # Bayesian params
