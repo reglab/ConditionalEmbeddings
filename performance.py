@@ -153,6 +153,28 @@ def main(args):
     run.update()
     run.finish()
 
+    # W&B Logging for the HistWords performance (for comparison)
+    api = wandb.Api()
+    try:
+        run = api.run(f'adus/bbb-uncertainty/HistWords_Benchmark')
+    except wandb.errors.CommError:
+        wandb.init(
+            project='bbb-uncertainty',
+            name='HistWords_Benchmark',
+            id='HistWords_Benchmark')
+
+        run = api.run(f'adus/bbb-uncertainty/HistWords_Benchmark')
+        wb_hw_analogy = analogy_df.loc[(analogy_df['section'] == 'Total accuracy') & (analogy_df['vectors'] == 'HistWords')]
+        wb_hw_bruni = bruni_df.loc[(bruni_df['section'] == 'pearson_stat') & (bruni_df['vectors'] == 'HistWords')]
+
+        run.summary['Mean analogy accuracy'] = wb_hw_analogy['accuracy'].mean()
+        run.summary['Mean similarity stat'] = wb_hw_bruni['accuracy'].mean()
+
+        run.summary['Max analogy accuracy'] = wb_hw_analogy['accuracy'].max()
+        run.summary['Max similarity stat'] = wb_hw_bruni['accuracy'].max()
+        run.update()
+        run.save()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
