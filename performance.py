@@ -39,13 +39,36 @@ def load_coha_HistWords(input_dir, only_nonzero):
     return vectors
 
 
+def load_BBB_nonzero(file_stamp, run_id, only_nonzero, match_vectors=None):
+    bbb_vecs = {}
+    for decade in range(181, 201):
+        decade_str = str(decade) + '0'
+        file_name = f"data/COHA/results/decade_embeddings_{file_stamp}_{run_id}_{decade}.txt"
+        if only_nonzero:
+            assert match_vectors is not None
+            temp_file_name = 'vectors.txt'
+            with open(temp_file_name, 'w') as wf:
+                with open(file_name, 'r') as rf:
+                    for line in rf:
+                        w, vec = line.split(' ', maxsplit=1)
+                        if w in list(match_vectors[decade_str].key_to_index.keys()):
+                            wf.write(f"{w} {vec}")
+            file_name = temp_file_name
+
+        bbb_vecs[decade_str] = gensim.models.KeyedVectors.load_word2vec_format(file_name, binary=False, no_header=True)
+
+        if only_nonzero:
+            os.remove(temp_file_name)
+
+    return bbb_vecs
+
+
 def main(args):
     # Load vectors
     print('[INFO] Loading vectors')
-    bbb_vecs = {}
-    for decade in range(181, 201):
-        bbb_vecs[str(decade) + '0'] = gensim.models.KeyedVectors.load_word2vec_format(
-            f"data/COHA/results/decade_embeddings_{args.file_stamp}_{args.run_id}_{decade}.txt", binary=False, no_header=True)
+    histwords = load_coha_HistWords(input_dir=args.histwords_dir, only_nonzero=True)
+    bbb_vecs = load_BBB_nonzero(
+        file_stamp=args.file_stamp, run_id=args.run_id, only_nonzero=True, match_vectors=histwords)
 
     # Analogy task
     print('[INFO] Computing analogy scores')
@@ -74,7 +97,6 @@ def main(args):
                  'decade': [decade], 'negative': args.negative,  'vectors': ['BBB']})])
 
     # HistWords performance
-    histwords = load_coha_HistWords(input_dir=args.histwords_dir, only_nonzero=True)
     for decade, word_vecs in tqdm(histwords.items()):
         score, sections = word_vecs.evaluate_word_analogies(args.eval_dir / 'questions-words.txt')
 
@@ -139,6 +161,7 @@ def main(args):
     ax.figure.savefig(args.output_dir / f"bruni_{args.file_stamp}_{args.run_id}.png")
 
     # W&B Logging
+    """
     api = wandb.Api()
     run = api.run(f"adus/bbb-uncertainty/{args.run_id}")
     wb_analogy = analogy_df.loc[(analogy_df['section'] == 'Total accuracy') & (analogy_df['vectors'] == 'BBB')]
@@ -174,7 +197,7 @@ def main(args):
         run.summary['Max similarity stat'] = wb_hw_bruni['accuracy'].max()
         run.update()
         run.save()
-
+    """
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
