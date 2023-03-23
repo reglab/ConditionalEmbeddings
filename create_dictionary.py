@@ -1,3 +1,4 @@
+import argparse
 import numpy as np
 import os
 import time
@@ -20,23 +21,16 @@ def process(text):
     return processed
 
 
-@click.command()
-@click.option(
-    "--source_dir", type=click.Path(exists=True), default="data/COHA/COHA_json"
-)
-@click.option("--saveto_dir", type=click.Path(), default="data/COHA/COHA_processed")
-@click.option("--window", type=int, default=7)
-@click.option("--save_label", type=str, default="coha")
-def main(source_dir: str, saveto_dir: str, window: int, save_label: str):
+def main(args):
     vocab0 = defaultdict(int)
     start = time.time()
 
-    source_dir = Path(source_dir)
-    saveto_dir = Path(saveto_dir)
+    source_dir = Path(args.source_dir)
+    saveto_dir = Path(args.saveto_dir)
     saveto_dir.mkdir(parents=True, exist_ok=True)
     jsonl_doc_paths = [x for x in source_dir.glob("*.json") if x.is_file()]
 
-    with open(os.path.join(saveto_dir, f"{save_label}.txt"), "w") as f:
+    with open(os.path.join(saveto_dir, f"{args.save_label}.txt"), "w") as f:
         print(f"Loading {len(jsonl_doc_paths)} files")
 
         for file_path in tqdm.tqdm(jsonl_doc_paths):
@@ -49,7 +43,7 @@ def main(source_dir: str, saveto_dir: str, window: int, save_label: str):
                     label = d["filedate"][:3]
 
                     words = process(text)
-                    if len(words) < window:
+                    if len(words) < args.window:
                         continue
 
                     f.write(label + "\t")
@@ -67,9 +61,25 @@ def main(source_dir: str, saveto_dir: str, window: int, save_label: str):
 
     # vocab_f = OrderedDict({k: (vocab0[k]/total_words)**(3/4) for k in vocab.keys()})
 
-    np.save(str(saveto_dir / f"vocab_f{save_label}.npy"), vocab0)
-    np.save(str(saveto_dir / f"vocab{save_label}.npy"), vocab)
+    np.save(str(saveto_dir / f"vocab_f{args.save_label}.npy"), vocab0)
+    np.save(str(saveto_dir / f"vocab{args.save_label}.npy"), vocab)
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-run_location", type=str, required=True, choices=['local', 'sherlock'])
+    parser.add_argument("-source_dir", type=str, required=False)
+    parser.add_argument("-saveto_dir", type=str, required=False)
+    parser.add_argument("-window", type=int, default=7)
+    parser.add_argument("-save_label", type=str, default='coha')
+    args = parser.parse_args()
+
+    if args.run_location == 'sherlock':
+        base_dir = Path('/oak/stanford/groups/deho/legal_nlp/WEB')
+    elif args.run_location == 'local':
+        base_dir = Path(__file__).parent
+
+    args.saveto_dir = base_dir / "data/COHA/COHA_processed"
+    args.source_dir = base_dir / "data/COHA/COHA_json"
+
+    main(args)

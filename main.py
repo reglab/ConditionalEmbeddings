@@ -12,6 +12,19 @@ from datastream import load_data
 from utils import *
 
 
+class MultipleOptimizer:
+    def __init__(self, *op):
+        self.optimizers = op
+
+    def zero_grad(self):
+        for op in self.optimizers:
+            op.zero_grad()
+
+    def step(self):
+        for op in self.optimizers:
+            op.step()
+
+
 def main(args):
 
     embedding_size = args.emb
@@ -21,18 +34,25 @@ def main(args):
 
     n_words = len(vocab)
 
-    model = ConditionalBBP(n_words, embedding_size, args)
-
     batch_iterator = load_data(args)
 
     n_batch = int(np.ceil(batch_iterator.data_size / batch_size))
     print(f"total number of batches: {str(n_batch)}")
+    args.num_batches = batch_iterator.data_size
+
+    model = ConditionalBBP(n_words, embedding_size, args)
 
     if args.cuda:
         model.cuda()
 
-    optimizers = {'adam': optim.Adam, 'adagrad': optim.Adagrad, 'sparse_adam': optim.SparseAdam}
-    optimizer = optimizers[args.optim](model.parameters(), lr=args.lr)
+    if args.optim == 'adam':
+        opt_sparse = optim.SparseAdam(
+            [model.out_embed.weight, model.in_embed.weight, model.out_rho.weight, model.in_rho.weight], lr=args.lr)
+        opt_dense = optim.Adam([model.covariates.weight, model.linear.weight], lr=args.lr)
+        optimizer = MultipleOptimizer(opt_sparse, opt_dense)
+    elif args.optim == 'adagrad':
+        optimizer = optim.Adagrad(model.parameters(), lr=args.lr)
+
     losses = []
 
     print("start training model...\n")
@@ -68,7 +88,7 @@ def main(args):
             i += 1
             #if i > 2:
             #     break
-            w = batch_size / batch_iterator.data_size
+            w = args.temper_param
 
             if args.cuda:
                 torch.cuda.empty_cache()
@@ -80,7 +100,7 @@ def main(args):
                 )
 
             model.zero_grad()
-            loss = model(in_v, out_v, cvrs, w)
+            loss = model(in_v, out_v, cvrs, w, i)
             loss.backward()
             optimizer.step()
             curr_loss = loss.data.cpu().numpy().item()
@@ -90,7 +110,12 @@ def main(args):
                 exit()
             total_loss += curr_loss
             writer.writerow([epoch, i, curr_loss, total_loss])
-            wandb.log({"Step loss": curr_loss, 'Epoch': epoch, 'step': i})
+            if args.optim == 'adagrad':
+                step_lr = optimizer.param_groups[0]['lr']
+            elif args.optim == 'adam':
+                step_lr = optimizer.optimizers[0].param_groups[0]['lr']
+            wandb.log({"Step loss": curr_loss, 'Epoch': epoch, 'step': i,
+                       'Learning rate': step_lr})
 
         ave_loss = total_loss / n_batch
         print("average loss is: %s" % str(ave_loss))
@@ -107,13 +132,18 @@ def main(args):
             is_best = True
             wandb.run.summary['best_loss'] = ave_loss
 
+        if args.optim == 'adagrad':
+            opt_state_dict = optimizer.state_dict()
+        elif args.optim == 'adam':
+            opt_state_dict = optimizer.optimizers[0].state_dict()
+
         save_checkpoint(
             {
                 "epoch": epoch + 1,
                 "args": args,
                 "state_dict": model.state_dict(),
                 "loss": ave_loss,
-                "optimizer": optimizer.state_dict(),
+                "optimizer": opt_state_dict,
             },
             is_best,
             args.best_model_save_file,
@@ -137,6 +167,7 @@ if __name__ == "__main__":
     parser.add_argument("-best_model_save_file", type=str, default="model_best.pth.250.tar")
     parser.add_argument("-label_map", type=list)
     parser.add_argument("-run_id", type=str, required=True)
+    parser.add_argument("-run_location", type=str, choices=['local', 'sherlock'])
 
     # Hyperparameters
     parser.add_argument("-emb", type=int, default=300)
@@ -146,14 +177,17 @@ if __name__ == "__main__":
     parser.add_argument("-lr", type=float, default=0.05)
     parser.add_argument("-skips", type=int, default=3)
     parser.add_argument("-negs", type=int, default=6)
-    parser.add_argument("-initialize", type=str, default='BBB')
-    parser.add_argument("-optim", type=str, default='adagrad', choices=['adagrad', 'adam', 'sparse_adam'])
+    parser.add_argument("-initialize", type=str, default='BBB', choices=['kaiming', 'word2vec', 'BBB'])
+    parser.add_argument("-optim", type=str, default='adagrad', choices=['adagrad', 'adam'])
+    parser.add_argument("-num_batches", type=int, required=False)
     #parser.add_argument("-window", type=int, default=7)
 
     # Bayesian params
     parser.add_argument("-prior_weight", type=float, default=0.5)
     parser.add_argument("-sigma_1", type=float, default=1)
     parser.add_argument("-sigma_2", type=float, default=0.2)
+    parser.add_argument("-kl_tempering", type=str, choices=['none', 'uniform', 'blundell', 'book'])
+    parser.add_argument("-temper_param", type=float, default=1.)
     #parser.add_argument("-weight_scheme", type=int, default=1)
 
     # Training set up
@@ -162,8 +196,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    args.source = Path(__file__).parent / "data" / "COHA" / "COHA_processed"
-    args.saveto = Path(__file__).parent / "data" / "COHA" / "results"
+    if args.run_location == 'sherlock':
+        base_dir = Path('/oak/stanford/groups/deho/legal_nlp/WEB')
+    elif args.run_location == 'local':
+        base_dir = Path(__file__).parent
+    args.source = base_dir / "data" / "COHA" / "COHA_processed"
+    args.saveto = base_dir / "data" / "COHA" / "results"
     args.saveto.mkdir(parents=True, exist_ok=True)
 
     args.vocab = args.source / f"vocab{args.file_stamp}_freq.npy"
@@ -179,8 +217,5 @@ if __name__ == "__main__":
     if args.cuda:
         torch.cuda.manual_seed(args.seed)
         print("Using CUDA...")
-
-    if args.initialize not in ['kaiming', 'word2vec', 'BBB']:
-        raise Exception('[ERROR] Check weight initialization')
 
     main(args)

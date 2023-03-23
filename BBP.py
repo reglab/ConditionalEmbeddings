@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from torch.nn import Parameter
+import numpy as np
 
 
 class ConditionalBBP(nn.Module):
@@ -18,6 +19,9 @@ class ConditionalBBP(nn.Module):
         self.pr_w = args.prior_weight
         self.s1 = args.sigma_1
         self.s2 = args.sigma_2
+        self.kl_tempering = args.kl_tempering
+        self.batch = args.batch
+        self.num_batches = args.num_batches
 
         ### mu
         self.out_embed = nn.Embedding(num_words, self.embed_size, sparse=True)
@@ -102,7 +106,7 @@ class ConditionalBBP(nn.Module):
         ).exp()  # /(math.sqrt(2*math.pi)*self.s2)
         return (n1 + n2).log().sum(1)
 
-    def forward(self, inputs, outputs, covars, wt):
+    def forward(self, inputs, outputs, covars, wt, batch_num):
 
         use_cuda = self.out_embed.weight.is_cuda
 
@@ -180,7 +184,21 @@ class ConditionalBBP(nn.Module):
 
         likelihood = log_target + log_sampled
 
-        loss = wt * (post_in + post_out - prior_in - prior_out) - likelihood
+        # Define KL re-weighting
+        if self.kl_tempering == 'none':
+            kl_pi = 1
+        elif self.kl_tempering == 'uniform':
+            kl_pi = self.batch / self.num_batches
+        elif self.kl_tempering == 'blundell':
+            kl_pi = np.power(2, self.num_batches - batch_num) / (np.power(2, self.num_batches) - 1)
+        elif self.kl_tempering == 'book':
+            Lambda = 1
+            kl_pi = None
+            raise NotImplementedError
+        else:
+            raise Exception('[ERROR] Check tempering parameter.')
+
+        loss = wt * kl_pi * (post_in + post_out - prior_in - prior_out) - likelihood
         return loss.mean()
 
     def input_embeddings(self):

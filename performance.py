@@ -161,7 +161,6 @@ def main(args):
     ax.figure.savefig(args.output_dir / f"bruni_{args.file_stamp}_{args.run_id}.png")
 
     # W&B Logging
-    """
     api = wandb.Api()
     run = api.run(f"adus/bbb-uncertainty/{args.run_id}")
     wb_analogy = analogy_df.loc[(analogy_df['section'] == 'Total accuracy') & (analogy_df['vectors'] == 'BBB')]
@@ -174,7 +173,6 @@ def main(args):
     run.summary['Max similarity stat'] = wb_bruni['accuracy'].max()
 
     run.update()
-    run.finish()
 
     # W&B Logging for the HistWords performance (for comparison)
     api = wandb.Api()
@@ -197,7 +195,7 @@ def main(args):
         run.summary['Max similarity stat'] = wb_hw_bruni['accuracy'].max()
         run.update()
         run.save()
-    """
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

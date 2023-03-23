@@ -67,6 +67,27 @@ def main(args):
     ax.set(xlabel='Mean frequency (log) across decades', ylabel='Mean standard deviation')
     ax.figure.savefig(os.path.join(args.output_dir,  "mean_freq_sd.png"))
 
+    # Add data to W&B
+    wandb.init(
+        project='bbb-uncertainty',
+        id=args.run_id,
+        resume='allow'
+    )
+
+    summary_table = wandb.Table(dataframe=summary_df)
+
+    wandb.log({'median_sd': wandb.plot.scatter(
+        summary_table, 'log_median_freq', 'median_sd',
+        title='Median frequency (log) vs Median standard deviation')})
+
+    wandb.log({'mean_sd': wandb.plot.scatter(
+        summary_table, 'log_mean_freq', 'mean_sd',
+        title='Mean frequency (log) vs Mean standard deviation')})
+
+    #table_artifact = wandb.Artifact("variance_artifact", type="dataset")
+    #table_artifact.add(summary_table, "variance_table")
+    #wandb.run.log_artifact(table_artifact)
+
 
 
 
