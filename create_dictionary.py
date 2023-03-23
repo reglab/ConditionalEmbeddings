@@ -4,7 +4,6 @@ import os
 import time
 from collections import OrderedDict, defaultdict
 
-import click
 import json
 import re
 from pathlib import Path
