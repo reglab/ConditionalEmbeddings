@@ -3,7 +3,6 @@ import logging
 import json
 from typing import TypedDict
 
-import click
 from pathlib import Path
 from tqdm import tqdm
 
