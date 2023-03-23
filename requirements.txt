@@ -5,3 +5,7 @@ matplotlib
 spacy
 click
 tqdm
+seaborn
+gensim
+pandas
+wandb

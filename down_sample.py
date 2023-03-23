@@ -1,6 +1,7 @@
 import numpy as np
 import time
 from collections import OrderedDict
+from pathlib import Path
 
 import argparse
 
@@ -27,9 +28,9 @@ def main(args):
 
     start = time.time()
 
-    lines = [l for l in open(args.source + "%s.txt" % args.save_label, "r")]
+    lines = [l for l in open(str(args.source) + "/" + "%s.txt" % args.save_label, "r")]
 
-    with open(args.saveto + "%s_freq.txt" % args.save_label, "w") as f:
+    with open(str(args.saveto) + "/" + "%s_freq.txt" % args.save_label, "w") as f:
         print("loading all files...")
 
         for line in tqdm.tqdm(lines):
@@ -50,24 +51,28 @@ def main(args):
 
     print("%s seconds elapsed" % (time.time() - start))
 
-    np.save(args.saveto + "vocab" + args.save_label + "_freq.npy", vocab_freq)
+    np.save(str(args.saveto) + "/" + "vocab" + args.save_label + "_freq.npy", vocab_freq)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-source", type=str, default="data/COHA/COHA_processed/")
-    parser.add_argument("-saveto", type=str, default="data/COHA/COHA_processed/")
-    parser.add_argument(
-        "-vocab", type=str, default="data/COHA/COHA_processed/vocabcoha.npy"
-    )
-    parser.add_argument(
-        "-vocab_f", type=str, default="data/COHA/COHA_processed/vocab_fcoha.npy"
-    )
+    parser.add_argument("-source", type=str, required=False)
+    parser.add_argument("-saveto", type=str, required=False)
+    parser.add_argument("-vocab", type=str, required=False)
+    parser.add_argument("-vocab_f", type=str, required=False)
     parser.add_argument("-window", type=int, default=7)
-    parser.add_argument(
-        "-save_label", type=str, default="coha"
-    )  # file name of the saved files
+    parser.add_argument("-save_label", type=str, default="coha")  # file name of the saved files
     parser.add_argument("-top_K", type=int, default=50_000)
+    parser.add_argument("-run_location", type=str, required=True, choices=['local', 'sherlock'])
 
     args = parser.parse_args()
+    if args.run_location == 'sherlock':
+        base_dir = Path('/oak/stanford/groups/deho/legal_nlp/WEB')
+    elif args.run_location == 'local':
+        base_dir = Path(__file__).parent
+    args.source = base_dir / "data/COHA/COHA_processed/"
+    args.saveto = base_dir / "data/COHA/COHA_processed/"
+    args.vocab = base_dir / "data/COHA/COHA_processed/vocabcoha.npy"
+    args.vocab_f = base_dir / "data/COHA/COHA_processed/vocab_fcoha.npy"
+
     main(args)

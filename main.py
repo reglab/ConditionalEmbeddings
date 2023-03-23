@@ -1,6 +1,8 @@
 import argparse
+import csv
 import time
 from pathlib import Path
+import wandb
 
 import torch.optim as optim
 from tqdm import tqdm
@@ -8,6 +10,19 @@ from tqdm import tqdm
 from BBP import ConditionalBBP
 from datastream import load_data
 from utils import *
+
+
+class MultipleOptimizer:
+    def __init__(self, *op):
+        self.optimizers = op
+
+    def zero_grad(self):
+        for op in self.optimizers:
+            op.zero_grad()
+
+    def step(self):
+        for op in self.optimizers:
+            op.step()
 
 
 def main(args):
@@ -19,17 +34,25 @@ def main(args):
 
     n_words = len(vocab)
 
-    model = ConditionalBBP(n_words, embedding_size, args)
-
     batch_iterator = load_data(args)
 
     n_batch = int(np.ceil(batch_iterator.data_size / batch_size))
     print(f"total number of batches: {str(n_batch)}")
+    args.num_batches = batch_iterator.data_size
+
+    model = ConditionalBBP(n_words, embedding_size, args)
 
     if args.cuda:
         model.cuda()
 
-    optimizer = optim.Adagrad(model.parameters(), lr=args.lr)
+    if args.optim == 'adam':
+        opt_sparse = optim.SparseAdam(
+            [model.out_embed.weight, model.in_embed.weight, model.out_rho.weight, model.in_rho.weight], lr=args.lr)
+        opt_dense = optim.Adam([model.covariates.weight, model.linear.weight], lr=args.lr)
+        optimizer = MultipleOptimizer(opt_sparse, opt_dense)
+    elif args.optim == 'adagrad':
+        optimizer = optim.Adagrad(model.parameters(), lr=args.lr)
+
     losses = []
 
     print("start training model...\n")
@@ -40,6 +63,19 @@ def main(args):
             model, optimizer, args.best_model_save_file
         )
         print("train %s epochs before, loss is %s" % (epoch, loss))
+    
+    loss_file = open(Path(args.saveto) / "loss.csv", "w")
+    writer = csv.writer(loss_file)
+    writer.writerow(["epoch", "batch", "curr_loss", "total_loss"])
+
+    # W&B
+    wandb.init(
+        project='bbb-uncertainty',
+        config=args,
+        name=args.run_id,
+        id=args.run_id
+    )
+    wandb.watch(model, log="all")
 
     for epoch in tqdm(range(args.n_epochs), desc="Epoch", position=0, leave=True):
         model.train()
@@ -47,12 +83,12 @@ def main(args):
 
         i = 0
         for in_v, out_v, cvrs in tqdm(
-            batch_iterator, desc="Batch", position=1, leave=False
+            batch_iterator, total=batch_iterator.data_size, desc="Batch", position=1, leave=False
         ):
             i += 1
-            if i > 2:
-                break
-            w = batch_size / batch_iterator.data_size
+            #if i > 2:
+            #     break
+            w = args.temper_param
 
             if args.cuda:
                 torch.cuda.empty_cache()
@@ -64,10 +100,22 @@ def main(args):
                 )
 
             model.zero_grad()
-            loss = model(in_v, out_v, cvrs, w)
+            loss = model(in_v, out_v, cvrs, w, i)
             loss.backward()
             optimizer.step()
-            total_loss += loss.data.cpu().numpy().item()
+            curr_loss = loss.data.cpu().numpy().item()
+            # Check if curr_loss is NaN
+            if curr_loss != curr_loss:
+                print(f"loss is NaN at epoch {str(epoch)} batch {str(i)}, exiting...")
+                exit()
+            total_loss += curr_loss
+            writer.writerow([epoch, i, curr_loss, total_loss])
+            if args.optim == 'adagrad':
+                step_lr = optimizer.param_groups[0]['lr']
+            elif args.optim == 'adam':
+                step_lr = optimizer.optimizers[0].param_groups[0]['lr']
+            wandb.log({"Step loss": curr_loss, 'Epoch': epoch, 'step': i,
+                       'Learning rate': step_lr})
 
         ave_loss = total_loss / n_batch
         print("average loss is: %s" % str(ave_loss))
@@ -79,8 +127,15 @@ def main(args):
 
         if epoch == 0:
             is_best = True
+            wandb.run.summary['best_loss'] = ave_loss
         elif ave_loss < losses[epoch - 1]:
             is_best = True
+            wandb.run.summary['best_loss'] = ave_loss
+
+        if args.optim == 'adagrad':
+            opt_state_dict = optimizer.state_dict()
+        elif args.optim == 'adam':
+            opt_state_dict = optimizer.optimizers[0].state_dict()
 
         save_checkpoint(
             {
@@ -88,18 +143,22 @@ def main(args):
                 "args": args,
                 "state_dict": model.state_dict(),
                 "loss": ave_loss,
-                "optimizer": optimizer.state_dict(),
+                "optimizer": opt_state_dict,
             },
             is_best,
             args.best_model_save_file,
         )
+        wandb.log({"Epoch loss": ave_loss, 'Epoch': epoch})
 
+    loss_file.close()
     print(losses)
+    wandb.finish()
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
+    # Corpus and paths
     parser.add_argument("-vocab", type=str)
     parser.add_argument("-source", type=str)
     parser.add_argument("-saveto", type=str)
@@ -107,7 +166,10 @@ if __name__ == "__main__":
     parser.add_argument("-source_file", type=str)
     parser.add_argument("-best_model_save_file", type=str, default="model_best.pth.250.tar")
     parser.add_argument("-label_map", type=list)
+    parser.add_argument("-run_id", type=str, required=True)
+    parser.add_argument("-run_location", type=str, choices=['local', 'sherlock'])
 
+    # Hyperparameters
     parser.add_argument("-emb", type=int, default=300)
     parser.add_argument("-batch", type=int, default=1)
     parser.add_argument("-n_epochs", type=int, default=1)
@@ -115,24 +177,40 @@ if __name__ == "__main__":
     parser.add_argument("-lr", type=float, default=0.05)
     parser.add_argument("-skips", type=int, default=3)
     parser.add_argument("-negs", type=int, default=6)
-    parser.add_argument("-window", type=int, default=7)
-    parser.add_argument("-cuda", type=bool, default=False)
+    parser.add_argument("-initialize", type=str, default='BBB', choices=['kaiming', 'word2vec', 'BBB'])
+    parser.add_argument("-optim", type=str, default='adagrad', choices=['adagrad', 'adam'])
+    parser.add_argument("-num_batches", type=int, required=False)
+    #parser.add_argument("-window", type=int, default=7)
+
+    # Bayesian params
     parser.add_argument("-prior_weight", type=float, default=0.5)
     parser.add_argument("-sigma_1", type=float, default=1)
     parser.add_argument("-sigma_2", type=float, default=0.2)
-    parser.add_argument("-weight_scheme", type=int, default=1)
+    parser.add_argument("-kl_tempering", type=str, choices=['none', 'uniform', 'blundell', 'book'])
+    parser.add_argument("-temper_param", type=float, default=1.)
+    #parser.add_argument("-weight_scheme", type=int, default=1)
+
+    # Training set up
+    parser.add_argument("-cuda", type=bool, default=False)
     parser.add_argument("-load_model", type=float, default=False)
+
     args = parser.parse_args()
 
-    args.source = Path(__file__).parent / "data" / "COHA" / "COHA_processed"
-    args.saveto = Path(__file__).parent / "data" / "COHA" / "results"
+    if args.run_location == 'sherlock':
+        base_dir = Path('/oak/stanford/groups/deho/legal_nlp/WEB')
+    elif args.run_location == 'local':
+        base_dir = Path(__file__).parent
+    args.source = base_dir / "data" / "COHA" / "COHA_processed"
+    args.saveto = base_dir / "data" / "COHA" / "results"
     args.saveto.mkdir(parents=True, exist_ok=True)
 
     args.vocab = args.source / f"vocab{args.file_stamp}_freq.npy"
     args.source_file = args.source / f"{args.file_stamp}_freq.txt"
     args.function = "NN"
 
-    args.best_model_save_file = args.saveto / f"model_best_{args.file_stamp}.pth.tar"
+    args.best_model_save_file = args.saveto / f"model_best_{args.file_stamp}_{args.run_id}.pth.tar"
+    if os.path.exists(args.best_model_save_file):
+        raise Exception('[ERROR] Weights path already exists. Run ID must be unique.')
 
     args.label_map = {str(v): k for k, v in enumerate(range(181, 201))}
 

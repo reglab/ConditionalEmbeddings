@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from torch.nn import Parameter
+import numpy as np
 
 
 class ConditionalBBP(nn.Module):
@@ -18,6 +19,9 @@ class ConditionalBBP(nn.Module):
         self.pr_w = args.prior_weight
         self.s1 = args.sigma_1
         self.s2 = args.sigma_2
+        self.kl_tempering = args.kl_tempering
+        self.batch = args.batch
+        self.num_batches = args.num_batches
 
         ### mu
         self.out_embed = nn.Embedding(num_words, self.embed_size, sparse=True)
@@ -51,6 +55,20 @@ class ConditionalBBP(nn.Module):
         self.covariates.weight = Parameter(
             torch.FloatTensor(self.n_labels, self.embed_size).uniform_(-1, 1)
         )
+
+        if args.initialize == "kaiming":
+            nn.init.kaiming_uniform_(self.out_embed.weight)
+            nn.init.kaiming_uniform_(self.in_embed.weight)
+            nn.init.kaiming_uniform_(self.out_rho.weight)
+            nn.init.kaiming_uniform_(self.in_rho.weight)
+            nn.init.kaiming_uniform_(self.covariates.weight)
+
+        if args.initialize == "word2vec":
+            nn.init.uniform_(self.out_embed.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
+            nn.init.uniform_(self.in_embed.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
+            nn.init.uniform_(self.out_rho.weight, a=-0.5, b=0.5)
+            nn.init.uniform_(self.in_rho.weight, a=-0.5, b=0.5)
+            nn.init.uniform_(self.covariates.weight, a=-0.5, b=0.5)
 
         self.linear = nn.Linear(embed_size * 2, embed_size)
         self.act = nn.Tanh()
@@ -88,7 +106,7 @@ class ConditionalBBP(nn.Module):
         ).exp()  # /(math.sqrt(2*math.pi)*self.s2)
         return (n1 + n2).log().sum(1)
 
-    def forward(self, inputs, outputs, covars, wt):
+    def forward(self, inputs, outputs, covars, wt, batch_num):
 
         use_cuda = self.out_embed.weight.is_cuda
 
@@ -153,20 +171,34 @@ class ConditionalBBP(nn.Module):
 
         else:
             noise = Variable(
-                torch.Tensor(batch_size, self.num_sampled)
+                torch.Tensor(batch_size * window_size, self.num_sampled)
                 .uniform_(0, self.num_words - 1)
                 .long()
             )
         if use_cuda:
             noise = noise.cuda()
 
-        noise = self.out_embed(noise).neg().view(-1, self.embed_size)
-
-        log_sampled = (w_in * noise).sum(1).sigmoid().log()
+        noise = self.out_embed(noise).neg()
+        log_sampled = (w_in.unsqueeze(1) * noise).sum(-1).sigmoid().log()
+        log_sampled = log_sampled.mean(-1)
 
         likelihood = log_target + log_sampled
 
-        loss = wt * (post_in + post_out - prior_in - prior_out) - likelihood
+        # Define KL re-weighting
+        if self.kl_tempering == 'none':
+            kl_pi = 1
+        elif self.kl_tempering == 'uniform':
+            kl_pi = self.batch / self.num_batches
+        elif self.kl_tempering == 'blundell':
+            kl_pi = np.power(2, self.num_batches - batch_num) / (np.power(2, self.num_batches) - 1)
+        elif self.kl_tempering == 'book':
+            Lambda = 1
+            kl_pi = None
+            raise NotImplementedError
+        else:
+            raise Exception('[ERROR] Check tempering parameter.')
+
+        loss = wt * kl_pi * (post_in + post_out - prior_in - prior_out) - likelihood
         return loss.mean()
 
     def input_embeddings(self):

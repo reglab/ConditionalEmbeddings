@@ -73,6 +73,9 @@ class load_data:
             if count >= self.batch_size:
                 break
 
+        # Temporary kludge to avoid memory issues
+        data = data[:10_000]
+
         in_idxs, out_idxs, covars = self.create_batch(data, self.vocab)
 
         return in_idxs, out_idxs, covars

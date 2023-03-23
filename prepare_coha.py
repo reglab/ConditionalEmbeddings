@@ -1,3 +1,4 @@
+import argparse
 import logging
 import json
 from typing import TypedDict
@@ -21,21 +22,14 @@ class CohaDocument(TypedDict):
     filedate: str  # ISO 8601 date
 
 
-DEFAULT_INPUT_DIR = Path(__file__).parent / "data/COHA/COHA_text"
-DEFAULT_OUTPUT_DIR = Path(__file__).parent / "data/COHA/COHA_json"
 
 
-@click.command()
-@click.option("--input_dir", type=click.Path(exists=True), default=DEFAULT_INPUT_DIR)
-@click.option(
-    "--output_dir", type=click.Path(), default=DEFAULT_OUTPUT_DIR, required=False
-)
-def main(input_dir: str, output_dir: str):
+def main(args):
     """
     Prepares our COHA files for ingestion by the scripts in this repo.
     """
-    input_dir = Path(input_dir)
-    output_dir = Path(output_dir)
+    input_dir = Path(args.input_dir)
+    output_dir = Path(args.output_dir)
     output_dir.mkdir(exist_ok=True)
 
     files_to_process = list(input_dir.glob("**/*.txt"))
@@ -64,4 +58,19 @@ def get_coha_document(path: str) -> CohaDocument:
 
 
 if __name__ == "__main__":
-    main()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-run_location", type=str, required=True, choices=['local', 'sherlock'])
+    parser.add_argument("-input_dir", type=str, required=False)
+    parser.add_argument("-output_dir", type=str, required=False)
+    args = parser.parse_args()
+
+    if args.run_location == 'sherlock':
+        base_dir = Path('/oak/stanford/groups/deho/legal_nlp/WEB')
+    elif args.run_location == 'local':
+        base_dir = Path(__file__).parent
+
+    args.input_dir = base_dir / "data/COHA/COHA_text"
+    args.output_dir = base_dir / "data/COHA/COHA_json"
+
+    main(args)
