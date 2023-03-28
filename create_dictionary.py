@@ -71,6 +71,7 @@ if __name__ == "__main__":
     parser.add_argument("-saveto_dir", type=str, required=False)
     parser.add_argument("-window", type=int, default=7)
     parser.add_argument("-save_label", type=str, default='coha')
+    parser.add_argument("-name", type=str, required=True)
     args = parser.parse_args()
 
     if args.run_location == 'sherlock':
@@ -78,7 +79,7 @@ if __name__ == "__main__":
     elif args.run_location == 'local':
         base_dir = Path(__file__).parent
 
-    args.saveto_dir = base_dir / "data/COHA/COHA_processed"
-    args.source_dir = base_dir / "data/COHA/COHA_json"
+    args.saveto_dir = base_dir / f"data/{args.name}/COHA_processed"
+    args.source_dir = base_dir / f"data/{args.name}/COHA_json"
 
     main(args)

@@ -5,6 +5,14 @@ from torch.nn import Parameter
 import numpy as np
 
 
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('MacOSX')
+def plot_heatmap(tensor):
+    plt.imshow(tensor.detach().numpy(), cmap='hot')
+    plt.show()
+
+
 class ConditionalBBP(nn.Module):
     def __init__(self, num_words, embed_size, args, weights=None):
         super(ConditionalBBP, self).__init__()
@@ -22,6 +30,7 @@ class ConditionalBBP(nn.Module):
         self.kl_tempering = args.kl_tempering
         self.batch = args.batch
         self.num_batches = args.num_batches
+        self.scaling = args.scaling
 
         ### mu
         self.out_embed = nn.Embedding(num_words, self.embed_size, sparse=True)
@@ -130,7 +139,7 @@ class ConditionalBBP(nn.Module):
         if use_cuda:
             eps_in = eps_in.cuda()
 
-        w_in = self.act(self.linear(torch.cat([mu_in, y], 1))) + sig_in * eps_in
+        w_in = self.act(self.linear(torch.cat([mu_in, y], 1))) + self.scaling * sig_in * eps_in
 
         post_in = -0.5 * (eps_in**2).sum(1) - sig_in.log().sum(
             1
@@ -152,9 +161,9 @@ class ConditionalBBP(nn.Module):
         if use_cuda:
             eps_out = eps_out.cuda()
 
-        w_out = mu_out + sig_out * eps_out
+        w_out = mu_out + self.scaling * sig_out * eps_out
 
-        mu_out = self.out_embed(outputs.contiguous().view(-1))
+        #mu_out = self.out_embed(outputs.contiguous().view(-1))
 
         post_out = -0.5 * (eps_out**2).sum(1) - sig_out.log().sum(
             1

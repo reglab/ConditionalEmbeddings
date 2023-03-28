@@ -62,6 +62,7 @@ if __name__ == "__main__":
     parser.add_argument("-run_location", type=str, required=True, choices=['local', 'sherlock'])
     parser.add_argument("-input_dir", type=str, required=False)
     parser.add_argument("-output_dir", type=str, required=False)
+    parser.add_argument("-name", type=str, required=True)
     args = parser.parse_args()
 
     if args.run_location == 'sherlock':
@@ -69,7 +70,7 @@ if __name__ == "__main__":
     elif args.run_location == 'local':
         base_dir = Path(__file__).parent
 
-    args.input_dir = base_dir / "data/COHA/COHA_text"
-    args.output_dir = base_dir / "data/COHA/COHA_json"
+    args.input_dir = base_dir / f"data/{args.name}/COHA_text"
+    args.output_dir = base_dir / f"data/{args.name}/COHA_json"
 
     main(args)

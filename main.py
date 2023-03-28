@@ -8,6 +8,7 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from BBP import ConditionalBBP
+#from BBBOG import ConditionalBBP
 from datastream import load_data
 from utils import *
 
@@ -98,7 +99,7 @@ def main(args):
                 print(
                     f"training epoch {str(epoch)}: completed {str(round(100 * batch_iterator.count / batch_iterator.data_size, 2))} %"
                 )
-
+            #print(n)
             model.zero_grad()
             loss = model(in_v, out_v, cvrs, w, i)
             loss.backward()
@@ -159,7 +160,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     # Corpus and paths
-    parser.add_argument("-vocab", type=str)
+    parser.add_argument("-vocab", type=str, default="coha")
     parser.add_argument("-source", type=str)
     parser.add_argument("-saveto", type=str)
     parser.add_argument("-file_stamp", type=str, default="coha")
@@ -168,6 +169,7 @@ if __name__ == "__main__":
     parser.add_argument("-label_map", type=list)
     parser.add_argument("-run_id", type=str, required=True)
     parser.add_argument("-run_location", type=str, choices=['local', 'sherlock'])
+    parser.add_argument("-name", type=str, required=True)
 
     # Hyperparameters
     parser.add_argument("-emb", type=int, default=300)
@@ -188,6 +190,7 @@ if __name__ == "__main__":
     parser.add_argument("-sigma_2", type=float, default=0.2)
     parser.add_argument("-kl_tempering", type=str, choices=['none', 'uniform', 'blundell', 'book'])
     parser.add_argument("-temper_param", type=float, default=1.)
+    parser.add_argument("-scaling", type=float, default=1.)
     #parser.add_argument("-weight_scheme", type=int, default=1)
 
     # Training set up
@@ -200,8 +203,8 @@ if __name__ == "__main__":
         base_dir = Path('/oak/stanford/groups/deho/legal_nlp/WEB')
     elif args.run_location == 'local':
         base_dir = Path(__file__).parent
-    args.source = base_dir / "data" / "COHA" / "COHA_processed"
-    args.saveto = base_dir / "data" / "COHA" / "results"
+    args.source = base_dir / "data" / args.name / "COHA_processed"
+    args.saveto = base_dir / "data" / args.name / "results"
     args.saveto.mkdir(parents=True, exist_ok=True)
 
     args.vocab = args.source / f"vocab{args.file_stamp}_freq.npy"
