@@ -7,10 +7,10 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use('MacOSX')
-def plot_heatmap(tensor):
-    plt.imshow(tensor.detach().numpy(), cmap='hot')
-    plt.show()
+#matplotlib.use('MacOSX')
+#def plot_heatmap(tensor):
+#    plt.imshow(tensor.detach().numpy(), cmap='hot')
+#    plt.show()
 
 
 class ConditionalBBP(nn.Module):
