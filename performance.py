@@ -21,7 +21,7 @@ def main(args):
     print('[INFO] Loading vectors')
     histwords = load_coha_HistWords(input_dir=args.histwords_dir, only_nonzero=True)
     bbb_vecs = load_BBB_nonzero(
-        base_dir=args.base_dir / f'data/{args.name}/results', file_stamp=args.file_stamp,
+        input_dir=args.base_dir / f'data/{args.name}/results', file_stamp=args.file_stamp,
         run_id=args.run_id, only_nonzero=True, match_vectors=histwords)
 
     # Analogy task
