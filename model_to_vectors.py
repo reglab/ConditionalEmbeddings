@@ -1,5 +1,6 @@
 import argparse
 from BBP import ConditionalBBP
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -30,7 +31,7 @@ def load_model(model_path: str, vocab_path: str) -> ConditionalBBP:
 
 
 def get_embedding(model: ConditionalBBP, word: str, decade: int):
-    return model.linear(
+    return torch.tanh(model.linear(
         torch.cat(
             [
                 torch.tensor(model.word_input_embeddings[word]),
@@ -38,7 +39,7 @@ def get_embedding(model: ConditionalBBP, word: str, decade: int):
             ],
             0,
         )
-    ).tolist()
+    )).tolist()
 
 
 def get_dev(model: ConditionalBBP, word: str) -> list:
@@ -70,13 +71,13 @@ def compute_decade_embeddings(
 def main(args):
     torch.set_grad_enabled(False)
     model = load_model(
-        f"data/COHA/results/model_best_{args.file_stamp}_{args.run_id}.pth.tar",
-        "data/COHA/COHA_processed/vocabcoha_freq.npy",
+        args.base_dir / f"data/{args.name}/results/model_best_{args.file_stamp}_{args.run_id}.pth.tar",
+        args.base_dir / f"data/{args.name}/COHA_processed/vocabcoha_freq.npy",
     )
     all_decades = list(model.label_map.keys())
     for decade in tqdm.tqdm(all_decades, desc="Decade", position=1):
         compute_decade_embeddings(
-            model, decade, f"data/COHA/results/decade_embeddings_{args.file_stamp}_{args.run_id}_{decade}.txt"
+            model, decade, args.base_dir / f"data/{args.name}/results/decade_embeddings_{args.file_stamp}_{args.run_id}_{decade}.txt"
         )
     all_words = list(model.vocab.keys())
     dev_vectors = []
@@ -90,16 +91,24 @@ def main(args):
     #         # chunksize=100,
     #     )
     # )
-    with open(f"data/COHA/results/dev_vectors_{args.file_stamp}_{args.run_id}.txt", "w") as f:
+    with open(args.base_dir / f"data/{args.name}/results/dev_vectors_{args.file_stamp}_{args.run_id}.txt", "w") as f:
         for word, dev in zip(all_words, dev_vectors):
             f.write(f"{word} {' '.join(map(str, dev))}\n")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-file_stamp", type=str, required=True)
+    parser.add_argument("-file_stamp", type=str, default="coha")
     parser.add_argument("-run_id", type=str, required=True)
+    parser.add_argument("-name", type=str, required=True)
+    parser.add_argument("-run_location", type=str, choices=['local', 'sherlock'])
+    parser.add_argument("-base_dir", type=str, required=False)
 
     args = parser.parse_args()
+
+    if args.run_location == 'sherlock':
+        args.base_dir = Path('/oak/stanford/groups/deho/legal_nlp/WEB')
+    elif args.run_location == 'local':
+        args.base_dir = Path(__file__).parent
 
     main(args)

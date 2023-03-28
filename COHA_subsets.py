@@ -5,6 +5,7 @@ import glob
 import json
 import shutil
 from pathlib import Path
+from tqdm import tqdm
 
 
 def main(args):
@@ -31,20 +32,14 @@ def main(args):
         with open(subset_path, 'w') as f:
             json.dump(files, f)
 
-    # Replace files
-    if args.replace:
-        #print('[INFO] Replacing files in COHA_text')
-        #for f in glob.glob(os.path.join('data/COHA/COHA_text', '*', '*.txt')):
-        #    os.remove(f)
-
-        print('[INFO] Loading new COHA subset')
-        for decade, decade_files in files.items():
-            os.makedirs(args.coha_output_dir / f"COHA_text/{decade}s", exist_ok=True)
-            for f in decade_files:
-                shutil.copy(
-                    src=f"{args.coha_path}/{f}",
-                    dst=args.coha_output_dir / f"COHA_text/{f}"
-                )
+    print('[INFO] Loading new COHA subset')
+    for decade, decade_files in tqdm(files.items()):
+        os.makedirs(args.coha_output_dir / f"COHA_text/{decade}s", exist_ok=True)
+        for f in decade_files:
+            shutil.copy(
+                src=f"{args.coha_path}/{f}",
+                dst=args.coha_output_dir / f"COHA_text/{f}"
+            )
 
 
 if __name__ == '__main__':
@@ -54,7 +49,6 @@ if __name__ == '__main__':
     parser.add_argument("-file_output_dir", type=str, required=False)
     parser.add_argument("-name", type=str, required=True)
     parser.add_argument("-percent", type=int)
-    parser.add_argument("-replace", type=bool, required=True)
     parser.add_argument("-run_location", type=str, required=True)
 
     args = parser.parse_args()
