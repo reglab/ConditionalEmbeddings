@@ -174,28 +174,6 @@ def main(args):
 
     run.update()
 
-    # W&B Logging for the HistWords performance (for comparison)
-    api = wandb.Api()
-    try:
-        run = api.run(f'adus/bbb-uncertainty/HistWords_Benchmark')
-    except wandb.errors.CommError:
-        wandb.init(
-            project='bbb-uncertainty',
-            name='HistWords_Benchmark',
-            id='HistWords_Benchmark')
-
-        run = api.run(f'adus/bbb-uncertainty/HistWords_Benchmark')
-        wb_hw_analogy = analogy_df.loc[(analogy_df['section'] == 'Total accuracy') & (analogy_df['vectors'] == 'HistWords')]
-        wb_hw_bruni = bruni_df.loc[(bruni_df['section'] == 'pearson_stat') & (bruni_df['vectors'] == 'HistWords')]
-
-        run.summary['Mean analogy accuracy'] = wb_hw_analogy['accuracy'].mean()
-        run.summary['Mean similarity stat'] = wb_hw_bruni['accuracy'].mean()
-
-        run.summary['Max analogy accuracy'] = wb_hw_analogy['accuracy'].max()
-        run.summary['Max similarity stat'] = wb_hw_bruni['accuracy'].max()
-        run.update()
-        run.save()
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -204,17 +182,25 @@ if __name__ == '__main__':
     parser.add_argument("-output_dir", type=str)
     parser.add_argument("-histwords_dir", type=str)
     parser.add_argument("-negative", type=int)
-    parser.add_argument("-file_stamp", type=str, required=True)
+    parser.add_argument("-file_stamp", type=str, default="coha")
     parser.add_argument("-run_id", type=str, required=True)
+    parser.add_argument("-name", type=str, required=True)
+    parser.add_argument("-run_location", type=str, choices=['local', 'sherlock'])
 
     args = parser.parse_args()
 
     # Paths
-    args.results_dir = Path(__file__).parent / "results"
-    args.eval_dir = Path(__file__).parent / "data" / "COHA" / "evaluation"
+    if args.run_location == 'sherlock':
+        base_dir = Path('/oak/stanford/groups/deho/legal_nlp/WEB')
+        args.histwords_dir = base_dir / 'data/HistWords/coha-word'
+    elif args.run_location == 'local':
+        base_dir = Path(__file__).parent
+        args.histwords_dir = '../Replication-Garg-2018/data/coha-word'
+
+    args.results_dir = base_dir / "results"
+    args.eval_dir = base_dir / "data" / "COHA" / "evaluation"
     args.output_dir = args.results_dir / "Performance"
     args.output_dir.mkdir(exist_ok=True)
     args.negative = 6
-    args.histwords_dir = '../Replication-Garg-2018/data/coha-word'
 
     main(args)

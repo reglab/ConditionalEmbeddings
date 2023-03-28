@@ -24,11 +24,11 @@ def main(args):
     bbb_vecs = {}
     for decade in range(181, 201):
         bbb_vecs[str(decade) + '0'] = gensim.models.KeyedVectors.load_word2vec_format(
-            f"data/COHA/results/decade_embeddings_{args.file_stamp}_{args.run_id}_{decade}.txt",
+            args.base_dir / f"data/{args.name}/results/decade_embeddings_{args.file_stamp}_{args.run_id}_{decade}.txt",
             binary=False, no_header=True)
 
     bbb_sds = gensim.models.KeyedVectors.load_word2vec_format(
-        f"data/COHA/results/dev_vectors_{args.file_stamp}_{args.run_id}.txt",
+        args.base_dir / f"data/{args.name}/results/dev_vectors_{args.file_stamp}_{args.run_id}.txt",
         binary=False, no_header=True)
 
     # Heatmap of zero locations in embeddings
@@ -71,8 +71,8 @@ def main(args):
 
     # Global vectors (in_embed)
     model = load_model(
-        f"data/COHA/results/model_best_{args.file_stamp}_{args.run_id}.pth.tar",
-        "data/COHA/COHA_processed/vocabcoha_freq.npy",
+        args.base_dir / f"data/{args.name}/results/model_best_{args.file_stamp}_{args.run_id}.pth.tar",
+        args.base_dir / f"data/{args.name}/COHA_processed/vocabcoha_freq.npy",
     )
     global_emb = model.word_input_embeddings
     emb_df = pd.DataFrame()
@@ -166,11 +166,19 @@ if __name__ == '__main__':
     parser.add_argument("-output_dir", type=str)
     parser.add_argument("-file_stamp", type=str, default="coha")
     parser.add_argument("-run_id", type=str, required=True)
+    parser.add_argument("-name", type=str, required=True)
+    parser.add_argument("-run_location", type=str, choices=['local', 'sherlock'])
+    parser.add_argument("-base_dir", type=str, required=False)
 
     args = parser.parse_args()
 
     # Paths
-    args.output_dir = 'results/embeddings'
+    if args.run_location == 'sherlock':
+        args.base_dir = Path('/oak/stanford/groups/deho/legal_nlp/WEB')
+    elif args.run_location == 'local':
+        args.base_dir = Path(__file__).parent
+
+    args.output_dir = args.base_dir / 'results/embeddings'
     os.makedirs(args.output_dir, exist_ok=True)
 
     main(args)
