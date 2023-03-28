@@ -64,15 +64,16 @@ if __name__ == "__main__":
     parser.add_argument("-save_label", type=str, default="coha")  # file name of the saved files
     parser.add_argument("-top_K", type=int, default=50_000)
     parser.add_argument("-run_location", type=str, required=True, choices=['local', 'sherlock'])
+    parser.add_argument("-name", type=str, required=True)
 
     args = parser.parse_args()
     if args.run_location == 'sherlock':
         base_dir = Path('/oak/stanford/groups/deho/legal_nlp/WEB')
     elif args.run_location == 'local':
         base_dir = Path(__file__).parent
-    args.source = base_dir / "data/COHA/COHA_processed/"
-    args.saveto = base_dir / "data/COHA/COHA_processed/"
-    args.vocab = base_dir / "data/COHA/COHA_processed/vocabcoha.npy"
-    args.vocab_f = base_dir / "data/COHA/COHA_processed/vocab_fcoha.npy"
+    args.source = base_dir /f"data/{args.name}/COHA_processed/"
+    args.saveto = base_dir / f"data/{args.name}/COHA_processed/"
+    args.vocab = base_dir / f"data/{args.name}/COHA_processed/vocabcoha.npy"
+    args.vocab_f = base_dir / f"data/{args.name}/COHA_processed/vocab_fcoha.npy"
 
     main(args)

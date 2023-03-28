@@ -8,6 +8,8 @@ import numpy as np
 from tqdm import tqdm
 from pathlib import Path
 import wandb
+from sklearn.metrics.pairwise import cosine_similarity
+
 
 from model_to_vectors import load_model
 
@@ -45,6 +47,7 @@ def main(args):
     #nonzero_df = nonzero_df.loc[nonzero_df['word'].isin(words)]
 
     # Melt
+    embed_df = nonzero_df.copy()
     nonzero_df = pd.melt(nonzero_df, id_vars=['word', 'decade'], var_name='dim', value_name='element')
 
     # Plot
@@ -58,7 +61,13 @@ def main(args):
     g.map_dataframe(facet_heatmap)
     g.set_titles(row_template="{row_name}", col_template='{col_name}')
     g.fig.suptitle('')
-    g.figure.savefig(os.path.join(args.output_dir, f"non-zero-{args.run_id}.png"), dpi=800)
+    g.figure.savefig(os.path.join(args.output_dir, f"embeds-{args.run_id}.png"), dpi=800)
+
+    # Cosine similarities
+    for decade in embed_df['decade'].unique():
+        decade_df = embed_df.loc[embed_df['decade'] == decade].copy()
+        decade_df.drop(['word', 'decade'], axis=1, inplace=True)
+        cs = cosine_similarity(decade_df)
 
     # Global vectors (in_embed)
     model = load_model(
@@ -102,6 +111,31 @@ def main(args):
     g.fig.suptitle('')
     g.figure.savefig(os.path.join(args.output_dir, f"sds-{args.run_id}.png"), dpi=1600)
 
+    # Plot decade vectors
+    decade_emb = model.year_covar
+
+    decade_df = pd.DataFrame()
+    for w, emb in decade_emb.items():
+        w_df = pd.DataFrame(emb.reshape(1, -1))
+        w_df['decade'] = w
+        w_df['word'] = w
+        decade_df = pd.concat([decade_df, w_df])
+
+    decade_df = pd.melt(decade_df, id_vars=['word', 'decade'], var_name='dim', value_name='element')
+
+    def facet_heatmap(data, color, **kws):
+        data = data.pivot_table(values='element', index='word', columns='dim')
+        sns.heatmap(data, cbar=True)
+
+    g = sns.FacetGrid(decade_df, col='decade', col_wrap=1)
+    g.map_dataframe(facet_heatmap)
+    g.set_titles(row_template="{row_name}", col_template='{col_name}')
+    g.fig.suptitle('')
+    g.figure.savefig(os.path.join(args.output_dir, f"covar-{args.run_id}.png"), dpi=400)
+
+    # Check output vectors
+
+
     """
     # Add data to W&B
     wandb.init(
@@ -130,7 +164,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-output_dir", type=str)
-    parser.add_argument("-file_stamp", type=str, required=True)
+    parser.add_argument("-file_stamp", type=str, default="coha")
     parser.add_argument("-run_id", type=str, required=True)
 
     args = parser.parse_args()
