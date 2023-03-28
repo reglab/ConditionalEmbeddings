@@ -13,54 +13,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('pdf')
 
-
-def load_coha_HistWords(input_dir, only_nonzero):
-    vectors_list = glob.glob(f'{input_dir}/*vectors.txt')
-    vectors = {}
-    for file_name in vectors_list:
-        file_decade = file_name.split(os.path.sep)[-1][:4]
-
-        if only_nonzero:
-            temp_file_name = 'vectors.txt'
-            with open(temp_file_name, 'w') as wf:
-                with open(file_name, 'r') as rf:
-                    for line in rf:
-                        w, vec = line.split(' ', maxsplit=1)
-                        npvec = np.fromstring(vec, sep=' ')
-                        if np.linalg.norm(npvec) > 1e-6:
-                            wf.write(f"{w} {vec}")
-            file_name = temp_file_name
-
-        vectors[file_decade] = gensim.models.KeyedVectors.load_word2vec_format(file_name, binary=False, no_header=True)
-
-        if only_nonzero:
-            os.remove(temp_file_name)
-
-    return vectors
-
-
-def load_BBB_nonzero(file_stamp, run_id, only_nonzero, match_vectors=None):
-    bbb_vecs = {}
-    for decade in range(181, 201):
-        decade_str = str(decade) + '0'
-        file_name = f"data/COHA/results/decade_embeddings_{file_stamp}_{run_id}_{decade}.txt"
-        if only_nonzero:
-            assert match_vectors is not None
-            temp_file_name = 'vectors.txt'
-            with open(temp_file_name, 'w') as wf:
-                with open(file_name, 'r') as rf:
-                    for line in rf:
-                        w, vec = line.split(' ', maxsplit=1)
-                        if w in list(match_vectors[decade_str].key_to_index.keys()):
-                            wf.write(f"{w} {vec}")
-            file_name = temp_file_name
-
-        bbb_vecs[decade_str] = gensim.models.KeyedVectors.load_word2vec_format(file_name, binary=False, no_header=True)
-
-        if only_nonzero:
-            os.remove(temp_file_name)
-
-    return bbb_vecs
+from bias_utils import *
 
 
 def main(args):
@@ -68,7 +21,8 @@ def main(args):
     print('[INFO] Loading vectors')
     histwords = load_coha_HistWords(input_dir=args.histwords_dir, only_nonzero=True)
     bbb_vecs = load_BBB_nonzero(
-        file_stamp=args.file_stamp, run_id=args.run_id, only_nonzero=True, match_vectors=histwords)
+        base_dir=args.base_dir / f'data/{args.name}/results', file_stamp=args.file_stamp,
+        run_id=args.run_id, only_nonzero=True, match_vectors=histwords)
 
     # Analogy task
     print('[INFO] Computing analogy scores')
@@ -186,19 +140,20 @@ if __name__ == '__main__':
     parser.add_argument("-run_id", type=str, required=True)
     parser.add_argument("-name", type=str, required=True)
     parser.add_argument("-run_location", type=str, choices=['local', 'sherlock'])
+    parser.add_argument("-base_dir", type=str)
 
     args = parser.parse_args()
 
     # Paths
     if args.run_location == 'sherlock':
-        base_dir = Path('/oak/stanford/groups/deho/legal_nlp/WEB')
-        args.histwords_dir = base_dir / 'data/HistWords/coha-word'
+        args.base_dir = Path('/oak/stanford/groups/deho/legal_nlp/WEB')
+        args.histwords_dir = args.base_dir / 'data/HistWords/coha-word'
     elif args.run_location == 'local':
-        base_dir = Path(__file__).parent
+        args.base_dir = Path(__file__).parent
         args.histwords_dir = '../Replication-Garg-2018/data/coha-word'
 
-    args.results_dir = base_dir / "results"
-    args.eval_dir = base_dir / "data" / "COHA" / "evaluation"
+    args.results_dir = args.base_dir / "results"
+    args.eval_dir = args.base_dir / "data" / "COHA" / "evaluation"
     args.output_dir = args.results_dir / "Performance"
     args.output_dir.mkdir(exist_ok=True)
     args.negative = 6
