@@ -34,11 +34,11 @@ def main(args):
 
     print('[INFO] Loading new COHA subset')
     for decade, decade_files in tqdm(files.items()):
-        os.makedirs(args.coha_output_dir / f"COHA_text/{decade}s", exist_ok=True)
+        os.makedirs(args.coha_output_dir / f"text/{decade}s", exist_ok=True)
         for f in decade_files:
             shutil.copy(
                 src=f"{args.coha_path}/{f}",
-                dst=args.coha_output_dir / f"COHA_text/{f}"
+                dst=args.coha_output_dir / f"text/{f}"
             )
 
 

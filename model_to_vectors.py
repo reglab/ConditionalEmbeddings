@@ -72,7 +72,7 @@ def main(args):
     torch.set_grad_enabled(False)
     model = load_model(
         args.base_dir / f"data/{args.name}/results/model_best_{args.file_stamp}_{args.run_id}.pth.tar",
-        args.base_dir / f"data/{args.name}/COHA_processed/vocabcoha_freq.npy",
+        args.base_dir / f"data/{args.name}/processed/vocab_freq.npy",
     )
     all_decades = list(model.label_map.keys())
     for decade in tqdm.tqdm(all_decades, desc="Decade", position=1):

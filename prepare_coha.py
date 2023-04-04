@@ -70,7 +70,7 @@ if __name__ == "__main__":
     elif args.run_location == 'local':
         base_dir = Path(__file__).parent
 
-    args.input_dir = base_dir / f"data/{args.name}/COHA_text"
-    args.output_dir = base_dir / f"data/{args.name}/COHA_json"
+    args.input_dir = base_dir / f"data/{args.name}/text"
+    args.output_dir = base_dir / f"data/{args.name}/json"
 
     main(args)
