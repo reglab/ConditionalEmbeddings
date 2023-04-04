@@ -1,6 +1,7 @@
 import argparse
 from BBP import ConditionalBBP
 from pathlib import Path
+from argparse import Namespace
 
 import numpy as np
 import torch
@@ -15,7 +16,20 @@ def load_model(model_path: str, vocab_path: str) -> ConditionalBBP:
     torch_model = torch.load(model_path)
     # noinspection PyTypeChecker
     vocab: dict[str, int] = np.load(vocab_path, allow_pickle=True).item()
-    model = ConditionalBBP(len(vocab), torch_model["args"].emb, torch_model["args"])
+
+    # Load BBB model
+    try:
+        model = ConditionalBBP(len(vocab), torch_model["args"].emb, torch_model["args"])
+    except AttributeError:
+        args_cp = vars(torch_model['args'])
+        # In case we're using the OG BBB code, we add these arguments to we can still load the model
+        args_cp['kl_tempering'] = None
+        args_cp['batch'] = None
+        args_cp['num_batches'] = None
+        args_cp['scaling'] = None
+        args_cp['similarity'] = None
+        model = ConditionalBBP(len(vocab), torch_model["args"].emb, Namespace(**args_cp))
+
     model.load_state_dict(torch_model["state_dict"])
     model.vocab = vocab
     model.word_input_embeddings = {}
@@ -83,14 +97,7 @@ def main(args):
     dev_vectors = []
     for word in tqdm.tqdm(all_words, desc="Word", position=2):
         dev_vectors.append(get_dev(model, word))
-    # dev_vectors = list(
-    #     map(
-    #         get_dev,
-    #         [model] * len(all_words),
-    #         tqdm.tqdm(all_words),
-    #         # chunksize=100,
-    #     )
-    # )
+
     with open(args.base_dir / f"data/{args.name}/results/dev_vectors_{args.file_stamp}_{args.run_id}.txt", "w") as f:
         for word, dev in zip(all_words, dev_vectors):
             f.write(f"{word} {' '.join(map(str, dev))}\n")
