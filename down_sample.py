@@ -28,9 +28,9 @@ def main(args):
 
     start = time.time()
 
-    lines = [l for l in open(str(args.source) + "/" + "%s.txt" % args.save_label, "r")]
+    lines = [l for l in open(str(args.source) + "/" + "%s.txt" % args.name, "r")]
 
-    with open(str(args.saveto) + "/" + "%s_freq.txt" % args.save_label, "w") as f:
+    with open(str(args.saveto) + "/" + "%s_freq.txt" % args.name, "w") as f:
         print("loading all files...")
 
         for line in tqdm.tqdm(lines):
@@ -51,7 +51,7 @@ def main(args):
 
     print("%s seconds elapsed" % (time.time() - start))
 
-    np.save(str(args.saveto) + "/" + "vocab" + args.save_label + "_freq.npy", vocab_freq)
+    np.save(str(args.saveto) + "/" + "vocab" + "_freq.npy", vocab_freq)
 
 
 if __name__ == "__main__":
@@ -61,7 +61,6 @@ if __name__ == "__main__":
     parser.add_argument("-vocab", type=str, required=False)
     parser.add_argument("-vocab_f", type=str, required=False)
     parser.add_argument("-window", type=int, default=7)
-    parser.add_argument("-save_label", type=str, default="coha")  # file name of the saved files
     parser.add_argument("-top_K", type=int, default=50_000)
     parser.add_argument("-run_location", type=str, required=True, choices=['local', 'sherlock'])
     parser.add_argument("-name", type=str, required=True)
@@ -71,9 +70,9 @@ if __name__ == "__main__":
         base_dir = Path('/oak/stanford/groups/deho/legal_nlp/WEB')
     elif args.run_location == 'local':
         base_dir = Path(__file__).parent
-    args.source = base_dir /f"data/{args.name}/COHA_processed/"
-    args.saveto = base_dir / f"data/{args.name}/COHA_processed/"
-    args.vocab = base_dir / f"data/{args.name}/COHA_processed/vocabcoha.npy"
-    args.vocab_f = base_dir / f"data/{args.name}/COHA_processed/vocab_fcoha.npy"
+    args.source = base_dir /f"data/{args.name}/processed/"
+    args.saveto = base_dir / f"data/{args.name}/processed/"
+    args.vocab = base_dir / f"data/{args.name}/processed/vocab.npy"
+    args.vocab_f = base_dir / f"data/{args.name}/processed/vocab_f.npy"
 
     main(args)

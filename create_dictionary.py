@@ -29,7 +29,7 @@ def main(args):
     saveto_dir.mkdir(parents=True, exist_ok=True)
     jsonl_doc_paths = [x for x in source_dir.glob("*.json") if x.is_file()]
 
-    with open(os.path.join(saveto_dir, f"{args.save_label}.txt"), "w") as f:
+    with open(os.path.join(saveto_dir, f"{args.name}.txt"), "w") as f:
         print(f"Loading {len(jsonl_doc_paths)} files")
 
         for file_path in tqdm.tqdm(jsonl_doc_paths):
@@ -60,8 +60,8 @@ def main(args):
 
     # vocab_f = OrderedDict({k: (vocab0[k]/total_words)**(3/4) for k in vocab.keys()})
 
-    np.save(str(saveto_dir / f"vocab_f{args.save_label}.npy"), vocab0)
-    np.save(str(saveto_dir / f"vocab{args.save_label}.npy"), vocab)
+    np.save(str(saveto_dir / f"vocab_f.npy"), vocab0)
+    np.save(str(saveto_dir / f"vocab.npy"), vocab)
 
 
 if __name__ == "__main__":
@@ -70,7 +70,6 @@ if __name__ == "__main__":
     parser.add_argument("-source_dir", type=str, required=False)
     parser.add_argument("-saveto_dir", type=str, required=False)
     parser.add_argument("-window", type=int, default=7)
-    parser.add_argument("-save_label", type=str, default='coha')
     parser.add_argument("-name", type=str, required=True)
     args = parser.parse_args()
 
@@ -79,7 +78,7 @@ if __name__ == "__main__":
     elif args.run_location == 'local':
         base_dir = Path(__file__).parent
 
-    args.saveto_dir = base_dir / f"data/{args.name}/COHA_processed"
-    args.source_dir = base_dir / f"data/{args.name}/COHA_json"
+    args.saveto_dir = base_dir / f"data/{args.name}/processed"
+    args.source_dir = base_dir / f"data/{args.name}/json"
 
     main(args)

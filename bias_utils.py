@@ -31,23 +31,31 @@ def load_coha_HistWords(input_dir, only_nonzero):
 
 def load_BBB_nonzero(input_dir, file_stamp, run_id, only_nonzero, match_vectors=None):
     bbb_vecs = {}
-    for decade in range(181, 201):
-        decade_str = str(decade) + '0'
-        file_name = os.path.join(input_dir, f"decade_embeddings_{file_stamp}_{run_id}_{decade}.txt")
+
+    files = glob.glob(os.path.join(input_dir, f"decade_embeddings_{file_stamp}_{run_id}_*.txt"))
+
+    for file_name in files:
+        decade_str = file_name.split(os.path.sep)[-1].replace('.txt', '').split('_')[-1] + '0'
+        temp_file_name = 'TEMPORARY_VECTOR_FILE_DELETE.txt'
         if only_nonzero:
             assert match_vectors is not None
-            temp_file_name = 'vectors.txt'
-            with open(temp_file_name, 'w') as wf:
-                with open(file_name, 'r') as rf:
-                    for line in rf:
-                        w, vec = line.split(' ', maxsplit=1)
-                        if w in list(match_vectors[decade_str].key_to_index.keys()):
-                            wf.write(f"{w} {vec}")
-            file_name = temp_file_name
+
+            if decade_str not in match_vectors.keys():
+                print(f'[WARNING] No match for decade {decade_str} in HistWords')
+            else:
+                with open(temp_file_name, 'w') as wf:
+                    with open(file_name, 'r') as rf:
+                        for line in rf:
+                            w, vec = line.split(' ', maxsplit=1)
+                            if w in list(match_vectors[decade_str].key_to_index.keys()):
+                                wf.write(f"{w} {vec}")
+                file_name = temp_file_name
 
         bbb_vecs[decade_str] = gensim.models.KeyedVectors.load_word2vec_format(file_name, binary=False, no_header=True)
 
-        if only_nonzero:
+        try:
             os.remove(temp_file_name)
+        except OSError:
+            pass
 
     return bbb_vecs

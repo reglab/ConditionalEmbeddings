@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
-from torch.nn import Parameter
+from torch.nn import Parameter, CosineSimilarity
 import numpy as np
 
 
@@ -31,6 +31,7 @@ class ConditionalBBP(nn.Module):
         self.batch = args.batch
         self.num_batches = args.num_batches
         self.scaling = args.scaling
+        self.similarity = args.similarity
 
         ### mu
         self.out_embed = nn.Embedding(num_words, self.embed_size, sparse=True)
@@ -170,7 +171,13 @@ class ConditionalBBP(nn.Module):
         )  # - math.log(math.sqrt((2*math.pi)**self.embed_size))
         prior_out = self.compute_prior(w_out)
 
-        log_target = (w_in * w_out).sum(1).sigmoid().log()
+        if self.similarity == 'cosine':
+            cs = CosineSimilarity(dim=1)
+            log_target = cs(w_in, w_out).sigmoid().log()
+        elif self.similarity == 'dot_product':
+            log_target = (w_in * w_out).sum(1).sigmoid().log()
+        else:
+            raise Exception('[ERROR] Select similarity computation.')
 
         if self.weights is not None:
             noise_sample_count = batch_size * self.num_sampled
@@ -200,10 +207,6 @@ class ConditionalBBP(nn.Module):
             kl_pi = self.batch / self.num_batches
         elif self.kl_tempering == 'blundell':
             kl_pi = np.power(2, self.num_batches - batch_num) / (np.power(2, self.num_batches) - 1)
-        elif self.kl_tempering == 'book':
-            Lambda = 1
-            kl_pi = None
-            raise NotImplementedError
         else:
             raise Exception('[ERROR] Check tempering parameter.')
 

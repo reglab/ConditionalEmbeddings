@@ -12,6 +12,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 
 from model_to_vectors import load_model
+from bias_utils import load_BBB_nonzero
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -21,25 +22,29 @@ matplotlib.use('pdf')
 def main(args):
     # Load vectors
     print('[INFO] Loading vectors')
-    bbb_vecs = {}
-    for decade in range(181, 201):
-        bbb_vecs[str(decade) + '0'] = gensim.models.KeyedVectors.load_word2vec_format(
-            args.base_dir / f"data/{args.name}/results/decade_embeddings_{args.file_stamp}_{args.run_id}_{decade}.txt",
-            binary=False, no_header=True)
+    #bbb_vecs = {}
+    #for decade in range(181, 201):
+    #    bbb_vecs[str(decade) + '0'] = gensim.models.KeyedVectors.load_word2vec_format(
+    #        args.base_dir / f"data/{args.name}/results/decade_embeddings_{args.file_stamp}_{args.run_id}_{decade}.txt",
+    #        binary=False, no_header=True)
+
+    bbb_vecs = load_BBB_nonzero(
+        input_dir=os.path.join(args.base_dir, f'data/{args.name}/results'), file_stamp=args.file_stamp,
+        run_id=args.run_id, only_nonzero=False, match_vectors=None)
 
     bbb_sds = gensim.models.KeyedVectors.load_word2vec_format(
         args.base_dir / f"data/{args.name}/results/dev_vectors_{args.file_stamp}_{args.run_id}.txt",
         binary=False, no_header=True)
 
-    # Heatmap of zero locations in embeddings
+    # 1. Heatmap of embedding values =============================
     nonzero_df = pd.DataFrame()
-    for decade in range(1810, 2001, 10):
-        w = bbb_vecs[str(decade)].vectors
+    for decade_str in bbb_vecs.keys():
+        w = bbb_vecs[decade_str].vectors
         #nonzero = nonzero = np.abs(w) > 1e-6
         nonzero = w
         nonzero = pd.DataFrame(nonzero)
-        nonzero['decade'] = decade
-        nonzero['word'] = bbb_vecs[str(decade)].key_to_index.keys()
+        nonzero['decade'] = int(decade_str)
+        nonzero['word'] = bbb_vecs[decade_str].key_to_index.keys()
         nonzero_df = pd.concat([nonzero_df, nonzero])
 
     # random subset
@@ -69,10 +74,10 @@ def main(args):
         decade_df.drop(['word', 'decade'], axis=1, inplace=True)
         cs = cosine_similarity(decade_df)
 
-    # Global vectors (in_embed)
+    # 2. Global vectors (in_embed) =============================
     model = load_model(
         args.base_dir / f"data/{args.name}/results/model_best_{args.file_stamp}_{args.run_id}.pth.tar",
-        args.base_dir / f"data/{args.name}/COHA_processed/vocabcoha_freq.npy",
+        args.base_dir / f"data/{args.name}/processed/vocab_freq.npy",
     )
     global_emb = model.word_input_embeddings
     emb_df = pd.DataFrame()
@@ -94,7 +99,7 @@ def main(args):
     g.fig.suptitle('')
     g.figure.savefig(os.path.join(args.output_dir, f"global-{args.run_id}.png"), dpi=1600)
 
-    # Sds
+    # 3. Sds =============================
     sd_df = pd.DataFrame()
     for w in bbb_sds.key_to_index.keys():
         sd_vec = bbb_sds[bbb_sds.key_to_index[w]]
@@ -111,7 +116,7 @@ def main(args):
     g.fig.suptitle('')
     g.figure.savefig(os.path.join(args.output_dir, f"sds-{args.run_id}.png"), dpi=1600)
 
-    # Plot decade vectors
+    # 4. Decade vectors =============================
     decade_emb = model.year_covar
 
     decade_df = pd.DataFrame()

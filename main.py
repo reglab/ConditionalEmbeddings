@@ -8,7 +8,6 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from BBP import ConditionalBBP
-#from BBBOG import ConditionalBBP
 from datastream import load_data
 from utils import *
 
@@ -87,8 +86,6 @@ def main(args):
             batch_iterator, total=batch_iterator.data_size, desc="Batch", position=1, leave=False
         ):
             i += 1
-            #if i > 2:
-            #     break
             w = args.temper_param
 
             if args.cuda:
@@ -182,13 +179,13 @@ if __name__ == "__main__":
     parser.add_argument("-initialize", type=str, default='BBB', choices=['kaiming', 'word2vec', 'BBB'])
     parser.add_argument("-optim", type=str, default='adagrad', choices=['adagrad', 'adam'])
     parser.add_argument("-num_batches", type=int, required=False)
-    #parser.add_argument("-window", type=int, default=7)
+    parser.add_argument("-similarity", type=str, default='dot_product', choices=['dot_product', 'cosine'])
 
     # Bayesian params
     parser.add_argument("-prior_weight", type=float, default=0.5)
     parser.add_argument("-sigma_1", type=float, default=1)
     parser.add_argument("-sigma_2", type=float, default=0.2)
-    parser.add_argument("-kl_tempering", type=str, choices=['none', 'uniform', 'blundell', 'book'])
+    parser.add_argument("-kl_tempering", type=str, choices=['none', 'uniform', 'blundell'])
     parser.add_argument("-temper_param", type=float, default=1.)
     parser.add_argument("-scaling", type=float, default=1.)
     #parser.add_argument("-weight_scheme", type=int, default=1)
@@ -203,12 +200,12 @@ if __name__ == "__main__":
         base_dir = Path('/oak/stanford/groups/deho/legal_nlp/WEB')
     elif args.run_location == 'local':
         base_dir = Path(__file__).parent
-    args.source = base_dir / "data" / args.name / "COHA_processed"
+    args.source = base_dir / "data" / args.name / "processed"
     args.saveto = base_dir / "data" / args.name / "results"
     args.saveto.mkdir(parents=True, exist_ok=True)
 
-    args.vocab = args.source / f"vocab{args.file_stamp}_freq.npy"
-    args.source_file = args.source / f"{args.file_stamp}_freq.txt"
+    args.vocab = args.source / f"vocab_freq.npy"
+    args.source_file = args.source / f"{args.name}_freq.txt"
     args.function = "NN"
 
     args.best_model_save_file = args.saveto / f"model_best_{args.file_stamp}_{args.run_id}.pth.tar"
