@@ -77,7 +77,7 @@ def main(args):
     # 2. Global vectors (in_embed) =============================
     model = load_model(
         args.base_dir / f"data/{args.name}/results/model_best_{args.file_stamp}_{args.run_id}.pth.tar",
-        args.base_dir / f"data/{args.name}/processed/vocab_freq.npy",
+        args.base_dir / f"data/{args.name}/processed/vocab{args.file_stamp}_freq.npy",
     )
     global_emb = model.word_input_embeddings
     emb_df = pd.DataFrame()

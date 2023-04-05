@@ -13,7 +13,8 @@ from tqdm.contrib.concurrent import process_map
 
 
 def load_model(model_path: str, vocab_path: str) -> ConditionalBBP:
-    torch_model = torch.load(model_path)
+    torch_model = torch.load(
+        model_path, map_location=torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
     # noinspection PyTypeChecker
     vocab: dict[str, int] = np.load(vocab_path, allow_pickle=True).item()
 
