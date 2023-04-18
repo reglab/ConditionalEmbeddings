@@ -180,6 +180,7 @@ if __name__ == "__main__":
     parser.add_argument("-optim", type=str, default='adagrad', choices=['adagrad', 'adam'])
     parser.add_argument("-num_batches", type=int, required=False)
     parser.add_argument("-similarity", type=str, default='dot_product', choices=['dot_product', 'cosine'])
+    parser.add_argument("-no_mlp_layer", type=bool, default=False)
 
     # Bayesian params
     parser.add_argument("-prior_weight", type=float, default=0.5)
