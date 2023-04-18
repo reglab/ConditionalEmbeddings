@@ -30,6 +30,7 @@ def load_model(model_path: str, vocab_path: str) -> ConditionalBBP:
         args_cp['scaling'] = None
         args_cp['similarity'] = None
         args_cp['initialize'] = None
+        args_cp['no_mlp_layer'] = False
         model = ConditionalBBP(len(vocab), torch_model["args"].emb, Namespace(**args_cp))
 
     model.load_state_dict(torch_model["state_dict"])
@@ -47,6 +48,10 @@ def load_model(model_path: str, vocab_path: str) -> ConditionalBBP:
 
 
 def get_embedding(model: ConditionalBBP, word: str, decade: int):
+    # If we turned off the MLP layer, we return the global word embeddings
+    if model.no_mlp_layer:
+        return torch.tensor(model.word_input_embeddings[word]).tolist()
+
     return torch.tanh(model.linear(
         torch.cat(
             [

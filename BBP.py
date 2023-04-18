@@ -32,6 +32,7 @@ class ConditionalBBP(nn.Module):
         self.num_batches = args.num_batches
         self.scaling = args.scaling
         self.similarity = args.similarity
+        self.no_mlp_layer = args.no_mlp_layer
 
         ### mu
         self.out_embed = nn.Embedding(num_words, self.embed_size, sparse=True)
@@ -60,28 +61,32 @@ class ConditionalBBP(nn.Module):
         )
 
         ### covariance
-        self.covariates = nn.Embedding(self.n_labels, self.embed_size)
+        if self.no_mlp_layer is False:
+            self.covariates = nn.Embedding(self.n_labels, self.embed_size)
 
-        self.covariates.weight = Parameter(
-            torch.FloatTensor(self.n_labels, self.embed_size).uniform_(-1, 1)
-        )
+            self.covariates.weight = Parameter(
+                torch.FloatTensor(self.n_labels, self.embed_size).uniform_(-1, 1)
+            )
+
+            self.linear = nn.Linear(embed_size * 2, embed_size)
+            self.act = nn.Tanh()
 
         if args.initialize == "kaiming":
             nn.init.kaiming_uniform_(self.out_embed.weight)
             nn.init.kaiming_uniform_(self.in_embed.weight)
             nn.init.kaiming_uniform_(self.out_rho.weight)
             nn.init.kaiming_uniform_(self.in_rho.weight)
-            nn.init.kaiming_uniform_(self.covariates.weight)
+            if self.no_mlp_layer is False:
+                nn.init.kaiming_uniform_(self.covariates.weight)
 
         if args.initialize == "word2vec":
             nn.init.uniform_(self.out_embed.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
             nn.init.uniform_(self.in_embed.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
             nn.init.uniform_(self.out_rho.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
             nn.init.uniform_(self.in_rho.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
-            nn.init.uniform_(self.covariates.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
+            if self.no_mlp_layer is False:
+                nn.init.uniform_(self.covariates.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
 
-        self.linear = nn.Linear(embed_size * 2, embed_size)
-        self.act = nn.Tanh()
 
         self.weights = weights
         if self.weights is not None:
@@ -123,7 +128,8 @@ class ConditionalBBP(nn.Module):
         [batch_size, window_size] = outputs.size()
 
         # y is the covariate vector, should have the same size as word vector
-        y = self.covariates(covars.repeat(1, window_size).contiguous().view(-1))
+        if not self.no_mlp_layer:
+            y = self.covariates(covars.repeat(1, window_size).contiguous().view(-1))
 
         ### mu_in: (window_size * batch) * embed_size
         mu_in = self.in_embed(inputs)
@@ -140,7 +146,11 @@ class ConditionalBBP(nn.Module):
         if use_cuda:
             eps_in = eps_in.cuda()
 
-        w_in = self.act(self.linear(torch.cat([mu_in, y], 1))) + self.scaling * sig_in * eps_in
+        # Sample w_in according to whether we're using the MLP layer
+        if self.no_mlp_layer:
+            w_in = mu_in + self.scaling * sig_in * eps_in
+        else:
+            w_in = self.act(self.linear(torch.cat([mu_in, y], 1))) + self.scaling * sig_in * eps_in
 
         post_in = -0.5 * (eps_in**2).sum(1) - sig_in.log().sum(
             1
