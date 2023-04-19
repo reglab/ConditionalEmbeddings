@@ -42,8 +42,9 @@ def load_model(model_path: str, vocab_path: str) -> ConditionalBBP:
     for word, vec in zip(model.vocab.keys(), model.var_embeddings()):
         model.word_var[word] = vec
     model.year_covar = {}
-    for year, vec in zip(model.label_map.keys(), model.covar_embeddings()):
-        model.year_covar[year] = vec
+    if not model.no_mlp_layer:
+        for year, vec in zip(model.label_map.keys(), model.covar_embeddings()):
+            model.year_covar[year] = vec
     return model
 
 
