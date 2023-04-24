@@ -167,6 +167,8 @@ if __name__ == "__main__":
     parser.add_argument("-run_id", type=str, required=True)
     parser.add_argument("-run_location", type=str, choices=['local', 'sherlock'])
     parser.add_argument("-name", type=str, required=True)
+    parser.add_argument("-start_period", type=int, required=False, default=181)
+    parser.add_argument("-end_period", type=int, required=False, default=201)
 
     # Hyperparameters
     parser.add_argument("-emb", type=int, default=300)
@@ -208,12 +210,13 @@ if __name__ == "__main__":
     args.vocab = args.source / f"vocab_freq.npy"
     args.source_file = args.source / f"{args.name}_freq.txt"
     args.function = "NN"
+    args.file_stamp = args.name
 
     args.best_model_save_file = args.saveto / f"model_best_{args.file_stamp}_{args.run_id}.pth.tar"
     if os.path.exists(args.best_model_save_file):
         raise Exception('[ERROR] Weights path already exists. Run ID must be unique.')
 
-    args.label_map = {str(v): k for k, v in enumerate(range(181, 201))}
+    args.label_map = {str(v): k for k, v in enumerate(range(args.start_period, args.end_period))}
 
     if args.cuda:
         torch.cuda.manual_seed(args.seed)
