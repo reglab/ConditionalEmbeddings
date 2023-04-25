@@ -6,6 +6,10 @@ from pathlib import Path
 from argparse import Namespace
 import numpy as np
 import pandas as pd
+import matplotlib
+import matplotlib.pyplot as plt
+matplotlib.use('pdf')
+import seaborn as sns
 
 from bias_utils import load_BBB_nonzero
 
@@ -40,10 +44,47 @@ def main(args):
         m = np.dot(model.vectors, model.vectors.T)
         dot_matrices[decade] = m
 
+    # Single decade
+    select_decade = '1990'
     df = pd.concat(
-        [pd.DataFrame(dot_matrices['1990'].reshape(-1, )),
-        pd.DataFrame(pmi_matrices['1990'].to_numpy().reshape(-1, ))], axis=1)
+        [pd.DataFrame(dot_matrices[select_decade].reshape(-1, )),
+        pd.DataFrame(pmi_matrices[select_decade].to_numpy().reshape(-1, ))], axis=1)
     df.corr()
+
+    # Heat map
+    a = pd.DataFrame(dot_matrices[select_decade])
+    a['i'] = np.arange(a.shape[0])
+    a = pd.melt(a, id_vars=['i'], var_name='j', value_name='value')
+    a['type'] = 'Dot Product'
+
+    b = pmi_matrices[select_decade].copy()
+    b['i'] = np.arange(b.shape[0])
+    b = pd.melt(b, id_vars=['i'], var_name='j', value_name='value')
+    b['type'] = 'PMI'
+
+    df = pd.concat([a, b])
+
+    # Add word names
+    vocab = pmi_mat.groupby(['w_idx', 'w']).size().reset_index()[['w_idx', 'w']]
+    vocab = vocab.to_dict('split')['data']
+    vocab = {i:w for i, w in vocab}
+    df['w_i'] = df['i'].apply(lambda i: vocab[i])
+    df['w_j'] = df['j'].apply(lambda j: vocab[j])
+
+    vmin, vmax = df['value'].min(), df['value'].max()
+    def facet_heatmap(data, color, **kws):
+        data = data.pivot_table(values='value', index='w_i', columns='w_j')
+        sns.heatmap(data, cbar=True, vmin=vmin, vmax=vmax, cmap="vlag", center=0)
+
+    g = sns.FacetGrid(df, col='type')
+    g.map_dataframe(facet_heatmap)
+    g.set_titles(row_template="{row_name}", col_template='{col_name}')
+    g.fig.suptitle('')
+    g.set_xlabels('')
+    g.set_ylabels('')
+    g.figure.savefig(os.path.join(args.output_dir, f"pmi_dot_eval.png"), dpi=800)
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -51,6 +92,7 @@ if __name__ == "__main__":
     parser.add_argument("-name", type=str, required=True)
     parser.add_argument("-run_location", type=str, choices=['local', 'sherlock'])
     parser.add_argument("-base_dir", type=str, required=False)
+    parser.add_argument("-output_dir", type=str, required=False)
     parser.add_argument("-file_stamp", type=str, required=False)
 
     args = parser.parse_args()
@@ -60,5 +102,5 @@ if __name__ == "__main__":
     elif args.run_location == 'local':
         args.base_dir = Path(__file__).parent
     args.file_stamp = args.name
-
+    args.output_dir = os.path.join(args.base_dir, 'data', args.name, 'results')
     main(args)
