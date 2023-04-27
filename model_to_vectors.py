@@ -113,7 +113,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-file_stamp", type=str, default="coha")
+    parser.add_argument("-file_stamp", type=str, required=False)
     parser.add_argument("-run_id", type=str, required=True)
     parser.add_argument("-name", type=str, required=True)
     parser.add_argument("-run_location", type=str, choices=['local', 'sherlock'])
@@ -125,5 +125,6 @@ if __name__ == "__main__":
         args.base_dir = Path('/oak/stanford/groups/deho/legal_nlp/WEB')
     elif args.run_location == 'local':
         args.base_dir = Path(__file__).parent
+    args.file_stamp = args.name
 
     main(args)
