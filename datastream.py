@@ -83,16 +83,26 @@ class load_data:
     def create_batch(self, raw_batch, vocab):
 
         all_txt = list(zip(*raw_batch))
+
+        # Center indices
         idxs = list(map(lambda w: vocab[w], all_txt[1]))
+        # Repeat idx here to produce (cov, w, c) triples
+        in_idxs = np.repeat(idxs, repeats=self.skips * 2)
         in_idxs = Variable(
-            torch.LongTensor(idxs).view(len(raw_batch), 1), requires_grad=False
+            torch.LongTensor(in_idxs).view(len(raw_batch) * self.skips * 2, 1), requires_grad=False
         )
 
+        # Context indices
         idxs = list(map(lambda output: [vocab[w] for w in output], all_txt[2]))
+        # Flatten the list of contexts
+        out_idxs = [i for sl in idxs for i in sl]
         out_idxs = Variable(
-            torch.LongTensor(idxs).view(len(raw_batch), -1), requires_grad=False
+            torch.LongTensor(idxs).view(len(raw_batch) * self.skips * 2, -1), requires_grad=False
         )
 
+        # Covariate labels
         cvrs = list(map(lambda c: self.label_map[c], all_txt[0]))
-        cvrs = Variable(torch.LongTensor(cvrs).view(len(raw_batch), -1))
+        # Repeat
+        cvrs = np.repeat(cvrs, repeats=self.skips * 2)
+        cvrs = Variable(torch.LongTensor(cvrs).view(len(raw_batch) * self.skips * 2, -1))
         return in_idxs, out_idxs, cvrs

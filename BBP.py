@@ -34,6 +34,9 @@ class ConditionalBBP(nn.Module):
         self.similarity = args.similarity
         self.no_mlp_layer = args.no_mlp_layer
 
+        self.criterion = nn.BCEWithLogitsLoss()
+        self.skips = args.skips
+
         ### mu
         self.out_embed = nn.Embedding(num_words, self.embed_size, sparse=True)
 
@@ -125,22 +128,22 @@ class ConditionalBBP(nn.Module):
 
         use_cuda = self.out_embed.weight.is_cuda
 
-        [batch_size, window_size] = outputs.size()
+        [batch_size, _] = outputs.size()
 
         # y is the covariate vector, should have the same size as word vector
         if not self.no_mlp_layer:
-            y = self.covariates(covars.repeat(1, window_size).contiguous().view(-1))
+            y = self.covariates(covars.contiguous().view(-1))
 
         ### mu_in: (window_size * batch) * embed_size
-        mu_in = self.in_embed(inputs)
+        mu_in = self.in_embed(inputs.reshape(-1, ))
         eps_in = self.sample_var_noise(mu_in)
 
-        mu_in = self.reshape(mu_in, window_size)
-        eps_in = self.reshape(eps_in, window_size)
+        #mu_in = self.reshape(mu_in, window_size)
+        #eps_in = self.reshape(eps_in, window_size)
 
         ### sigma_in
-        sig_in = (self.in_rho(inputs).exp() + 1).log()
-        sig_in = self.reshape(sig_in, window_size)
+        sig_in = (self.in_rho(inputs.reshape(-1, )).exp() + 1).log()
+        #sig_in = self.reshape(sig_in, window_size)
 
         ### weights_in
         if use_cuda:
@@ -159,15 +162,15 @@ class ConditionalBBP(nn.Module):
         prior_in = self.compute_prior(w_in)
 
         ### mu_out: (window_size * batch) * embed_size
-        mu_out = self.out_embed(outputs)
+        mu_out = self.out_embed(outputs.reshape(-1, ))
         eps_out = self.sample_var_noise(mu_out)
-        mu_out = self.reshape(mu_out, window_size)
+        #mu_out = self.reshape(mu_out, window_size)
 
-        eps_out = self.reshape(eps_out, window_size)
+        #eps_out = self.reshape(eps_out, window_size)
 
         ### sigma_out
-        sig_out = (self.out_rho(outputs).exp() + 1).log()
-        sig_out = self.reshape(sig_out, window_size)
+        sig_out = (self.out_rho(outputs.reshape(-1, )).exp() + 1).log()
+        #sig_out = self.reshape(sig_out, window_size)
 
         if use_cuda:
             eps_out = eps_out.cuda()
@@ -183,9 +186,13 @@ class ConditionalBBP(nn.Module):
 
         if self.similarity == 'cosine':
             cs = CosineSimilarity(dim=1)
-            log_target = cs(w_in, w_out).sigmoid().log()
+            true_scores = cs(w_in, w_out)
+            # Note that this is a float with the mean across all obs in the batch
+            log_target = self.criterion(true_scores, torch.ones_like(true_scores))
         elif self.similarity == 'dot_product':
-            log_target = (w_in * w_out).sum(1).sigmoid().log()
+            true_scores = (w_in * w_out).sum(1)
+            # Note that this is a float with the mean across all obs in the batch
+            log_target = self.criterion(true_scores, torch.ones_like(true_scores))
         else:
             raise Exception('[ERROR] Select similarity computation.')
 
@@ -193,22 +200,24 @@ class ConditionalBBP(nn.Module):
             noise_sample_count = batch_size * self.num_sampled
             draw = self.sample(noise_sample_count)
 
-            noise = draw.view(batch_size, self.num_sampled)
-
+            noise = draw.view(batch_size, self.num_sampled)  # SHP [CENTER x WINDOW, K]
         else:
+            # Sample noise for each (w, c) pair
             noise = Variable(
-                torch.Tensor(batch_size * window_size, self.num_sampled)
+                torch.Tensor(batch_size, self.num_sampled)
                 .uniform_(0, self.num_words - 1)
                 .long()
             )
         if use_cuda:
             noise = noise.cuda()
 
-        noise = self.out_embed(noise).neg()
-        log_sampled = (w_in.unsqueeze(1) * noise).sum(-1).sigmoid().log()
-        log_sampled = log_sampled.mean(-1)
+        noise = self.out_embed(noise)
+        #log_sampled = (w_in.unsqueeze(1) * noise).sum(-1).sigmoid().log()
+        #log_sampled = log_sampled.mean(-1)
 
-        likelihood = log_target + log_sampled
+        neg_sample_scores = (w_in.unsqueeze(1) * noise).sum(-1)
+        log_sampled = self.criterion(neg_sample_scores, torch.zeros_like(neg_sample_scores))
+        likelihood_loss = log_target + log_sampled
 
         # Define KL re-weighting
         if self.kl_tempering == 'none':
@@ -220,8 +229,9 @@ class ConditionalBBP(nn.Module):
         else:
             raise Exception('[ERROR] Check tempering parameter.')
 
-        loss = wt * kl_pi * (post_in + post_out - prior_in - prior_out) - likelihood
-        return loss.mean()
+        kl_divergence = wt * kl_pi * (post_in + post_out - prior_in - prior_out)
+        loss = kl_divergence.mean() + likelihood_loss
+        return loss
 
     def input_embeddings(self):
         return self.in_embed.weight.data.cpu().numpy()

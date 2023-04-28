@@ -53,6 +53,14 @@ def main(args):
 
     np.save(str(args.saveto) + "/" + "vocab" + "_freq.npy", vocab_freq)
 
+    # Create weights file (unigram distribution for negative sampling)
+    weights_freq = []
+    uni_sum = np.sum(np.power(np.array(list(vocab_t_freq.values())), 3/4))
+    for key in vocab.keys():
+        uni_w = (vocab_t_freq[key] ** (3/4)) / uni_sum
+        weights_freq.append(uni_w)
+    np.save(str(args.saveto) + "/" + "vocab" + "_freq_weights.npy", weights_freq)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

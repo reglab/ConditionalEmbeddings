@@ -40,7 +40,12 @@ def main(args):
     print(f"total number of batches: {str(n_batch)}")
     args.num_batches = batch_iterator.data_size
 
-    model = ConditionalBBP(n_words, embedding_size, args)
+    # Unigram weights
+    weights = None
+    if args.weights:
+        weights = np.load(str(args.weights_file), allow_pickle=True)
+
+    model = ConditionalBBP(n_words, embedding_size, args, weights)
 
     if args.cuda:
         model.cuda()
@@ -191,6 +196,7 @@ if __name__ == "__main__":
     parser.add_argument("-kl_tempering", type=str, choices=['none', 'uniform', 'blundell'])
     parser.add_argument("-temper_param", type=float, default=1.)
     parser.add_argument("-scaling", type=float, default=1.)
+    parser.add_argument("-weights", type=bool, default=True)
     #parser.add_argument("-weight_scheme", type=int, default=1)
 
     # Training set up
@@ -209,6 +215,7 @@ if __name__ == "__main__":
 
     args.vocab = args.source / f"vocab_freq.npy"
     args.source_file = args.source / f"{args.name}_freq.txt"
+    args.weights_file = args.source / "vocab_freq_weights.npy"
     args.function = "NN"
     args.file_stamp = args.name
 
