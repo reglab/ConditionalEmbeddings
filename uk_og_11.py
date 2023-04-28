@@ -84,9 +84,13 @@ def plot_cs(embeddings):
         decade_cs = pd.melt(decade_cs)
         decade_cs = decade_cs.loc[~decade_cs['value'].isna()]
         decade_cs['model'] = name
+
+        # Randomly sample 5% of values so memory doesn't crash
+        decade_cs = decade_cs.sample(frac=0.05, replace=False)
+
         cs_df = pd.concat([cs_df, decade_cs])
 
-    g = sns.FacetGrid(cs_df, row='model', sharex=True)
+    g = sns.FacetGrid(cs_df, row='model', sharex=True, aspect=3)
     g.map_dataframe(sns.kdeplot, x='value')
     g.set_titles(row_template="{row_name}")
     g.fig.suptitle('')
