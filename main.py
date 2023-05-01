@@ -52,10 +52,13 @@ def main(args):
         model.cuda()
 
     if args.optim == 'adam':
-        opt_sparse = optim.SparseAdam(
-            [model.out_embed.weight, model.in_embed.weight, model.out_rho.weight, model.in_rho.weight], lr=args.lr)
-        opt_dense = optim.Adam([model.covariates.weight, model.linear.weight], lr=args.lr)
-        optimizer = MultipleOptimizer(opt_sparse, opt_dense)
+        if args.no_mlp_layer is False:
+            opt_sparse = optim.SparseAdam(
+                [model.out_embed.weight, model.in_embed.weight, model.out_rho.weight, model.in_rho.weight], lr=args.lr)
+            opt_dense = optim.Adam([model.covariates.weight, model.linear.weight], lr=args.lr)
+            optimizer = MultipleOptimizer(opt_sparse, opt_dense)
+        else:
+            optimizer = optim.Adam(model.parameters(), lr=args.lr)
     elif args.optim == 'adagrad':
         optimizer = optim.Adagrad(model.parameters(), lr=args.lr)
 
