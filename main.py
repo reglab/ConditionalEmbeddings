@@ -117,7 +117,7 @@ def main(args):
                 exit()
             total_loss += curr_loss
             writer.writerow([epoch, i, curr_loss, total_loss])
-            if args.optim == 'adagrad':
+            if args.optim == 'adagrad' or args.no_mlp_layer == True:
                 step_lr = optimizer.param_groups[0]['lr']
             elif args.optim == 'adam':
                 step_lr = optimizer.optimizers[0].param_groups[0]['lr']
@@ -139,7 +139,7 @@ def main(args):
             is_best = True
             wandb.run.summary['best_loss'] = ave_loss
 
-        if args.optim == 'adagrad':
+        if args.optim == 'adagrad' or args.no_mlp_layer == True:
             opt_state_dict = optimizer.state_dict()
         elif args.optim == 'adam':
             opt_state_dict = optimizer.optimizers[0].state_dict()
