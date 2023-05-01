@@ -58,7 +58,7 @@ def main(args):
             opt_dense = optim.Adam([model.covariates.weight, model.linear.weight], lr=args.lr)
             optimizer = MultipleOptimizer(opt_sparse, opt_dense)
         else:
-            optimizer = optim.Adam(model.parameters(), lr=args.lr)
+            optimizer = optim.SparseAdam(model.parameters(), lr=args.lr)
     elif args.optim == 'adagrad':
         optimizer = optim.Adagrad(model.parameters(), lr=args.lr)
 
