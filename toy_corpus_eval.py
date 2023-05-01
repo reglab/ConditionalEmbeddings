@@ -10,6 +10,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('pdf')
 import seaborn as sns
+import gensim
 
 from bias_utils import load_BBB_nonzero
 
@@ -20,8 +21,8 @@ def main(args):
         run_id=args.run_id, only_nonzero=False, match_vectors=None)
 
     # Generate PMI matrix
-    # python makecooccur.py --data ConditionalEmbeddings/data/ToySun/cooccur --info ConditionalEmbeddings/data/ToySun/info --type word --window-size 2 --out ConditionalEmbeddings/data/ToySun/cooccurs --start 1990 --end 2000 --step 10
-    # python PMI_compute.py -vectors None -wlist_dir ConditionalEmbeddings/data/ToySun/results/PMI -bin_dir ConditionalEmbeddings/data/ToySun/cooccurs/word/2 -word_dict_pkl ConditionalEmbeddings/data/ToySun/info/word-dict.pkl -output_dir ConditionalEmbeddings/data/ToySun/results/PMI
+    # python avaimar-coha-cooccur/makecooccur.py --data ConditionalEmbeddings/data/ToySun/cooccur --info ConditionalEmbeddings/data/ToySun/info --type word --window-size 2 --out ConditionalEmbeddings/data/ToySun/cooccurs --start 1990 --end 2000 --step 10
+    # python avaimar-coha-cooccur/PMI_compute.py -vectors None -wlist_dir ConditionalEmbeddings/data/ToySun/results/PMI -bin_dir ConditionalEmbeddings/data/ToySun/cooccurs/word/2 -word_dict_pkl ConditionalEmbeddings/data/ToySun/info/word-dict.pkl -output_dir ConditionalEmbeddings/data/ToySun/results/PMI
     pmi_mat = pd.read_csv(os.path.join(args.base_dir, 'data', args.name, 'results', 'PMI', 'pmi.csv'))
 
     pmi_matrices = {}
@@ -46,16 +47,12 @@ def main(args):
 
     # Single decade
     select_decade = '1990'
-    df = pd.concat(
-        [pd.DataFrame(dot_matrices[select_decade].reshape(-1, )),
-        pd.DataFrame(pmi_matrices[select_decade].to_numpy().reshape(-1, ))], axis=1)
-    df.corr()
 
     # Heat map
     a = pd.DataFrame(dot_matrices[select_decade])
     a['i'] = np.arange(a.shape[0])
     a = pd.melt(a, id_vars=['i'], var_name='j', value_name='value')
-    a['type'] = 'Dot Product'
+    a['type'] = 'Dot Product (BBB code)'
 
     b = pmi_matrices[select_decade].copy()
     b['i'] = np.arange(b.shape[0])
@@ -71,6 +68,25 @@ def main(args):
     df['w_i'] = df['i'].apply(lambda i: vocab[i])
     df['w_j'] = df['j'].apply(lambda j: vocab[j])
 
+    if args.gensim_vectors is not None:
+        # python COHA-SGNS/train_ToySun.py
+        gensim_vecs = {}
+        gensim_vecs['1990'] = gensim.models.KeyedVectors.load(args.gensim_vectors)
+        gensim_dot_matrices = {}
+        for decade, model in gensim_vecs.items():
+            # Normalize
+            m = np.dot(model.vectors, model.vectors.T)
+            gensim_dot_matrices[decade] = m
+
+        c = pd.DataFrame(gensim_dot_matrices[select_decade])
+        c['i'] = np.arange(c.shape[0])
+        c = pd.melt(c, id_vars=['i'], var_name='j', value_name='value')
+        c['type'] = 'Dot Product (gensim code)'
+        c['w_i'] = c['i'].apply(lambda i: gensim_vecs[select_decade].index_to_key[i])
+        c['w_j'] = c['j'].apply(lambda j: gensim_vecs[select_decade].index_to_key[j])
+
+        df = pd.concat([df, c])
+
     vmin, vmax = df['value'].min(), df['value'].max()
     def facet_heatmap(data, color, **kws):
         data = data.pivot_table(values='value', index='w_i', columns='w_j')
@@ -82,8 +98,7 @@ def main(args):
     g.fig.suptitle('')
     g.set_xlabels('')
     g.set_ylabels('')
-    g.figure.savefig(os.path.join(args.output_dir, f"pmi_dot_eval.png"), dpi=800)
-
+    g.figure.savefig(os.path.join(args.output_dir, f"pmi_dot_eval_{args.run_id}.png"), dpi=800)
 
 
 if __name__ == "__main__":
@@ -94,6 +109,7 @@ if __name__ == "__main__":
     parser.add_argument("-base_dir", type=str, required=False)
     parser.add_argument("-output_dir", type=str, required=False)
     parser.add_argument("-file_stamp", type=str, required=False)
+    parser.add_argument("-gensim_vectors", type=str, required=False)
 
     args = parser.parse_args()
 
@@ -103,4 +119,7 @@ if __name__ == "__main__":
         args.base_dir = Path(__file__).parent
     args.file_stamp = args.name
     args.output_dir = os.path.join(args.base_dir, 'data', args.name, 'results')
+
+    args.gensim_vectors = os.path.join(args.base_dir, 'data/ToySun/results/gensim/wv-gensim.kv')
+
     main(args)

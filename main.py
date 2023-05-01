@@ -43,6 +43,7 @@ def main(args):
     # Unigram weights
     weights = None
     if args.weights:
+        print('[INFO] Using ungiram weights for negative sampling')
         weights = np.load(str(args.weights_file), allow_pickle=True)
 
     model = ConditionalBBP(n_words, embedding_size, args, weights)
@@ -196,8 +197,10 @@ if __name__ == "__main__":
     parser.add_argument("-kl_tempering", type=str, choices=['none', 'uniform', 'blundell'])
     parser.add_argument("-temper_param", type=float, default=1.)
     parser.add_argument("-scaling", type=float, default=1.)
+
+    # Unigram weights
     parser.add_argument("-weights", type=bool, default=True)
-    #parser.add_argument("-weight_scheme", type=int, default=1)
+    parser.add_argument("-weights_file", type=str, required=False)
 
     # Training set up
     parser.add_argument("-cuda", type=bool, default=False)
