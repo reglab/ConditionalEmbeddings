@@ -166,7 +166,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     # Corpus and paths
-    parser.add_argument("-vocab", type=str, default="coha")
+    parser.add_argument("-vocab", type=str)
     parser.add_argument("-source", type=str)
     parser.add_argument("-saveto", type=str)
     parser.add_argument("-file_stamp", type=str, default="coha")

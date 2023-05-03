@@ -13,12 +13,25 @@ import seaborn as sns
 import gensim
 
 from bias_utils import load_BBB_nonzero
+from BBP import ConditionalBBP
+import torch
 
 
 def main(args):
+    # Word vectors
     bbb_vecs = load_BBB_nonzero(
         input_dir=os.path.join(args.base_dir, f'data/{args.name}/results'), file_stamp=args.file_stamp,
         run_id=args.run_id, only_nonzero=False, match_vectors=None)
+
+    # Context vectors
+    vocab = list(bbb_vecs[list(bbb_vecs.keys())[0]].key_to_index)
+    model_path = os.path.join(args.base_dir, f"data/{args.name}/results/model_best_{args.file_stamp}_{args.run_id}.pth.tar")
+    torch_model = torch.load(
+        model_path, map_location=torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+    bbb_model = ConditionalBBP(len(vocab), torch_model["args"].emb, torch_model["args"])
+    bbb_model.load_state_dict(torch_model["state_dict"])
+    out_embeddings = bbb_model.out_embeddings()
+    #in_embeddings = bbb_model.input_embeddings()
 
     # Generate PMI matrix
     # python avaimar-coha-cooccur/makecooccur.py --data ConditionalEmbeddings/data/ToySun/cooccur --info ConditionalEmbeddings/data/ToySun/info --type word --window-size 2 --out ConditionalEmbeddings/data/ToySun/cooccurs --start 1990 --end 2000 --step 10
@@ -42,7 +55,7 @@ def main(args):
     for decade, model in bbb_vecs.items():
         # Normalize
         #model.init_sims(replace=True)
-        m = np.dot(model.vectors, model.vectors.T)
+        m = np.dot(model.vectors, out_embeddings.T)
         dot_matrices[decade] = m
 
     # Single decade
@@ -109,7 +122,7 @@ if __name__ == "__main__":
     parser.add_argument("-base_dir", type=str, required=False)
     parser.add_argument("-output_dir", type=str, required=False)
     parser.add_argument("-file_stamp", type=str, required=False)
-    parser.add_argument("-gensim_vectors", type=str, required=False)
+    parser.add_argument("-gensim_vectors", type=str, required=False, default=None)
 
     args = parser.parse_args()
 
@@ -118,8 +131,8 @@ if __name__ == "__main__":
     elif args.run_location == 'local':
         args.base_dir = Path(__file__).parent
     args.file_stamp = args.name
-    args.output_dir = os.path.join(args.base_dir, 'data', args.name, 'results')
+    args.output_dir = os.path.join(args.base_dir, 'data', args.name, 'results', 'PMI_Eval')
 
-    args.gensim_vectors = os.path.join(args.base_dir, 'data/ToySun/results/gensim/wv-gensim.kv')
+    #args.gensim_vectors = os.path.join(args.base_dir, 'data/ToySun/results/gensim/wv-gensim.kv')
 
     main(args)
