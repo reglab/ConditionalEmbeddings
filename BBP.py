@@ -241,3 +241,6 @@ class ConditionalBBP(nn.Module):
 
     def var_embeddings(self):
         return self.in_rho.weight.data.cpu().numpy()
+
+    def out_embeddings(self):
+        return self.out_embed.weight.data.cpu().numpy()

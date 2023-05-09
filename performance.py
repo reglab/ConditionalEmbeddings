@@ -51,6 +51,7 @@ def main(args):
                  'decade': [decade],  'vectors': ['BBB']})])
 
     # HistWords performance
+    """
     for decade, word_vecs in tqdm(histwords.items()):
         score, sections = word_vecs.evaluate_word_analogies(args.eval_dir / 'questions-words.txt')
 
@@ -83,29 +84,29 @@ def main(args):
             [eval_score, pd.DataFrame.from_dict(
                 {'task': ['Bruni'], 'section': ['spearman_stat'], 'accuracy': [spearman.statistic],
                  'decade': int(decade), 'vectors': 'HistWords'})])
-
+    """
     # Viz overall accuracy
     analogy_df = eval_score.loc[eval_score['task'] == 'analogy'].copy()
 
-    plt.clf()
-    ax = sns.scatterplot(
-        analogy_df.loc[(analogy_df['section'] == 'Total accuracy')],
-        x="vectors", y='accuracy', hue='decade', legend=False)
-    ax.set_ylim(0, 0.6)
-    ax.set(xlabel='Vectors', ylabel='Accuracy')
-    ax.figure.savefig(args.output_dir / f"analogy_{args.file_stamp}_{args.run_id}.png")
+    #plt.clf()
+    #ax = sns.scatterplot(
+    #    analogy_df.loc[(analogy_df['section'] == 'Total accuracy')],
+    #    x="vectors", y='accuracy', hue='decade', legend=False)
+    #ax.set_ylim(0, 0.6)
+    #ax.set(xlabel='Vectors', ylabel='Accuracy')
+    #ax.figure.savefig(args.output_dir / f"analogy_{args.file_stamp}_{args.run_id}.png")
 
 
     # Viz Bruni stat
     bruni_df = eval_score.loc[eval_score['task'] == 'Bruni'].copy()
 
-    plt.clf()
-    ax = sns.scatterplot(
-        bruni_df.loc[(bruni_df['section'] == 'pearson_stat')],
-        x="vectors", y='accuracy', hue='decade', legend=False)
-    ax.set_ylim(0, 0.8)
-    ax.set(xlabel='Vectors', ylabel='Pearson statistic')
-    ax.figure.savefig(args.output_dir / f"bruni_{args.file_stamp}_{args.run_id}.png")
+    #plt.clf()
+    #ax = sns.scatterplot(
+    #    bruni_df.loc[(bruni_df['section'] == 'pearson_stat')],
+    #    x="vectors", y='accuracy', hue='decade', legend=False)
+    #ax.set_ylim(0, 0.8)
+    #ax.set(xlabel='Vectors', ylabel='Pearson statistic')
+    #ax.figure.savefig(args.output_dir / f"bruni_{args.file_stamp}_{args.run_id}.png")
 
     # W&B Logging
     api = wandb.Api()
@@ -119,6 +120,9 @@ def main(args):
     run.summary['Max analogy accuracy'] = wb_analogy['accuracy'].max()
     run.summary['Max similarity stat'] = wb_bruni['accuracy'].max()
 
+    print(f"[INFO] Maximum analogy accuracy: {wb_analogy['accuracy'].max()}")
+    print(f"[INFO] Maximum similarity accuracy: {wb_bruni['accuracy'].max()}")
+
     run.update()
 
 
@@ -128,7 +132,7 @@ if __name__ == '__main__':
     parser.add_argument("-eval_dir", type=str)
     parser.add_argument("-output_dir", type=str)
     parser.add_argument("-histwords_dir", type=str)
-    parser.add_argument("-file_stamp", type=str, default="coha")
+    parser.add_argument("-file_stamp", type=str)
     parser.add_argument("-run_id", type=str, required=True)
     parser.add_argument("-name", type=str, required=True)
     parser.add_argument("-run_location", type=str, choices=['local', 'sherlock'])

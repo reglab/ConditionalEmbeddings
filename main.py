@@ -135,7 +135,7 @@ def main(args):
         if epoch == 0:
             is_best = True
             wandb.run.summary['best_loss'] = ave_loss
-        elif ave_loss < losses[epoch - 1]:
+        elif len(losses) > 0 and ave_loss < min(losses):
             is_best = True
             wandb.run.summary['best_loss'] = ave_loss
 

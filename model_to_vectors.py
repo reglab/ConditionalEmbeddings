@@ -97,10 +97,16 @@ def main(args):
         args.base_dir / f"data/{args.name}/processed/vocab_freq.npy",
     )
     all_decades = list(model.label_map.keys())
-    for decade in tqdm.tqdm(all_decades, desc="Decade", position=1):
+    if model.no_mlp_layer:
         compute_decade_embeddings(
-            model, decade, args.base_dir / f"data/{args.name}/results/decade_embeddings_{args.file_stamp}_{args.run_id}_{decade}.txt"
+            model, 0,
+            args.base_dir / f"data/{args.name}/results/decade_embeddings_{args.file_stamp}_{args.run_id}_200.txt"
         )
+    else:
+        for decade in tqdm.tqdm(all_decades, desc="Decade", position=1):
+            compute_decade_embeddings(
+                model, decade, args.base_dir / f"data/{args.name}/results/decade_embeddings_{args.file_stamp}_{args.run_id}_{decade}.txt"
+            )
     all_words = list(model.vocab.keys())
     dev_vectors = []
     for word in tqdm.tqdm(all_words, desc="Word", position=2):
