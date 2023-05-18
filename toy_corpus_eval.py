@@ -23,6 +23,10 @@ def main(args):
         input_dir=os.path.join(args.base_dir, f'data/{args.name}/results'), file_stamp=args.file_stamp,
         run_id=args.run_id, only_nonzero=False, match_vectors=None)
 
+    bbb_sds = gensim.models.KeyedVectors.load_word2vec_format(
+        os.path.join(args.base_dir, f'data/{args.name}/results/dev_vectors_{args.file_stamp}_{args.run_id}.txt'),
+        binary=False, no_header=True)
+
     # Context vectors
     vocab = list(bbb_vecs[list(bbb_vecs.keys())[0]].key_to_index)
     model_path = os.path.join(args.base_dir, f"data/{args.name}/results/model_best_{args.file_stamp}_{args.run_id}.pth.tar")
@@ -103,7 +107,10 @@ def main(args):
     vmin, vmax = df['value'].min(), df['value'].max()
     def facet_heatmap(data, color, **kws):
         data = data.pivot_table(values='value', index='w_i', columns='w_j')
-        sns.heatmap(data, cbar=True, vmin=vmin, vmax=vmax, cmap="vlag", center=0)
+        sns.heatmap(
+            data, cbar=True,
+            #vmin=vmin, vmax=vmax,
+            cmap="vlag", center=0)
 
     g = sns.FacetGrid(df, col='type')
     g.map_dataframe(facet_heatmap)
@@ -112,6 +119,12 @@ def main(args):
     g.set_xlabels('')
     g.set_ylabels('')
     g.figure.savefig(os.path.join(args.output_dir, f"pmi_dot_eval_{args.run_id}.png"), dpi=800)
+
+    # Plot deviations
+    plt.clf()
+    ax = sns.heatmap(bbb_sds.vectors, cbar=True, cmap="vlag")
+    ax.set(xlabel='', ylabel='')
+    ax.figure.savefig(os.path.join(args.output_dir, f"dev_{args.run_id}.png"))
 
 
 if __name__ == "__main__":

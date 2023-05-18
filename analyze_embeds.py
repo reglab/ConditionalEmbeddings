@@ -22,12 +22,6 @@ matplotlib.use('pdf')
 def main(args):
     # Load vectors
     print('[INFO] Loading vectors')
-    #bbb_vecs = {}
-    #for decade in range(181, 201):
-    #    bbb_vecs[str(decade) + '0'] = gensim.models.KeyedVectors.load_word2vec_format(
-    #        args.base_dir / f"data/{args.name}/results/decade_embeddings_{args.file_stamp}_{args.run_id}_{decade}.txt",
-    #        binary=False, no_header=True)
-
     bbb_vecs = load_BBB_nonzero(
         input_dir=os.path.join(args.base_dir, f'data/{args.name}/results'), file_stamp=args.file_stamp,
         run_id=args.run_id, only_nonzero=False, match_vectors=None)
@@ -169,7 +163,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-output_dir", type=str)
-    parser.add_argument("-file_stamp", type=str, default="coha")
+    parser.add_argument("-file_stamp", type=str)
     parser.add_argument("-run_id", type=str, required=True)
     parser.add_argument("-name", type=str, required=True)
     parser.add_argument("-run_location", type=str, choices=['local', 'sherlock'])

@@ -123,6 +123,12 @@ def main(args):
     print(f"[INFO] Maximum analogy accuracy: {wb_analogy['accuracy'].max()}")
     print(f"[INFO] Maximum similarity accuracy: {wb_bruni['accuracy'].max()}")
 
+    print('Analogy')
+    print(wb_analogy)
+
+    print('Similarity')
+    print(wb_bruni)
+
     run.update()
 
 

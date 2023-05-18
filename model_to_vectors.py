@@ -42,7 +42,7 @@ def load_model(model_path: str, vocab_path: str) -> ConditionalBBP:
     for word, vec in zip(model.vocab.keys(), model.var_embeddings()):
         model.word_var[word] = vec
     model.year_covar = {}
-    if not model.no_mlp_layer:
+    if model.no_mlp_layer is False:
         for year, vec in zip(model.label_map.keys(), model.covar_embeddings()):
             model.year_covar[year] = vec
     return model
@@ -100,7 +100,7 @@ def main(args):
     if model.no_mlp_layer:
         compute_decade_embeddings(
             model, 0,
-            args.base_dir / f"data/{args.name}/results/decade_embeddings_{args.file_stamp}_{args.run_id}_200.txt"
+            args.base_dir / f"data/{args.name}/results/decade_embeddings_{args.file_stamp}_{args.run_id}_199.txt"
         )
     else:
         for decade in tqdm.tqdm(all_decades, desc="Decade", position=1):
