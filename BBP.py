@@ -5,14 +5,6 @@ from torch.nn import Parameter, CosineSimilarity
 import numpy as np
 
 
-import matplotlib.pyplot as plt
-import matplotlib
-#matplotlib.use('MacOSX')
-#def plot_heatmap(tensor):
-#    plt.imshow(tensor.detach().numpy(), cmap='hot')
-#    plt.show()
-
-
 class ConditionalBBP(nn.Module):
     def __init__(self, num_words, embed_size, args, weights=None):
         super(ConditionalBBP, self).__init__()
@@ -117,10 +109,10 @@ class ConditionalBBP(nn.Module):
 
     def compute_prior(self, w):
         n1 = (
-            self.pr_w * (-(w**2) / (2 * self.s1**2)).exp()
+                self.pr_w * (-(w ** 2) / (2 * self.s1 ** 2)).exp()
         )  # /(math.sqrt(2*math.pi)*self.s1)
         n2 = (1 - self.pr_w) * (
-            -(w**2) / (2 * self.s2**2)
+                -(w ** 2) / (2 * self.s2 ** 2)
         ).exp()  # /(math.sqrt(2*math.pi)*self.s2)
         return (n1 + n2).log().sum(1)
 
@@ -138,12 +130,12 @@ class ConditionalBBP(nn.Module):
         mu_in = self.in_embed(inputs.reshape(-1, ))
         eps_in = self.sample_var_noise(mu_in)
 
-        #mu_in = self.reshape(mu_in, window_size)
-        #eps_in = self.reshape(eps_in, window_size)
+        # mu_in = self.reshape(mu_in, window_size)
+        # eps_in = self.reshape(eps_in, window_size)
 
         ### sigma_in
         sig_in = (self.in_rho(inputs.reshape(-1, )).exp() + 1).log()
-        #sig_in = self.reshape(sig_in, window_size)
+        # sig_in = self.reshape(sig_in, window_size)
 
         ### weights_in
         if use_cuda:
@@ -155,7 +147,7 @@ class ConditionalBBP(nn.Module):
         else:
             w_in = self.act(self.linear(torch.cat([mu_in, y], 1))) + self.scaling * sig_in * eps_in
 
-        post_in = -0.5 * (eps_in**2).sum(1) - sig_in.log().sum(
+        post_in = -0.5 * (eps_in ** 2).sum(1) - sig_in.log().sum(
             1
         )  # - math.log(math.sqrt((2*math.pi)**self.embed_size))
 
@@ -164,22 +156,22 @@ class ConditionalBBP(nn.Module):
         ### mu_out: (window_size * batch) * embed_size
         mu_out = self.out_embed(outputs.reshape(-1, ))
         eps_out = self.sample_var_noise(mu_out)
-        #mu_out = self.reshape(mu_out, window_size)
+        # mu_out = self.reshape(mu_out, window_size)
 
-        #eps_out = self.reshape(eps_out, window_size)
+        # eps_out = self.reshape(eps_out, window_size)
 
         ### sigma_out
         sig_out = (self.out_rho(outputs.reshape(-1, )).exp() + 1).log()
-        #sig_out = self.reshape(sig_out, window_size)
+        # sig_out = self.reshape(sig_out, window_size)
 
         if use_cuda:
             eps_out = eps_out.cuda()
 
         w_out = mu_out + self.scaling * sig_out * eps_out
 
-        #mu_out = self.out_embed(outputs.contiguous().view(-1))
+        # mu_out = self.out_embed(outputs.contiguous().view(-1))
 
-        post_out = -0.5 * (eps_out**2).sum(1) - sig_out.log().sum(
+        post_out = -0.5 * (eps_out ** 2).sum(1) - sig_out.log().sum(
             1
         )  # - math.log(math.sqrt((2*math.pi)**self.embed_size))
         prior_out = self.compute_prior(w_out)
@@ -212,8 +204,8 @@ class ConditionalBBP(nn.Module):
             noise = noise.cuda()
 
         noise = self.out_embed(noise)
-        #log_sampled = (w_in.unsqueeze(1) * noise).sum(-1).sigmoid().log()
-        #log_sampled = log_sampled.mean(-1)
+        # log_sampled = (w_in.unsqueeze(1) * noise).sum(-1).sigmoid().log()
+        # log_sampled = log_sampled.mean(-1)
 
         neg_sample_scores = (w_in.unsqueeze(1) * noise).sum(-1)
         log_sampled = self.criterion(neg_sample_scores, torch.zeros_like(neg_sample_scores))

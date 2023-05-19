@@ -202,7 +202,7 @@ if __name__ == "__main__":
     parser.add_argument("-scaling", type=float, default=1.)
 
     # Unigram weights
-    parser.add_argument("-weights", type=bool, default=True)
+    parser.add_argument("-weights", type=bool, default=False)
     parser.add_argument("-weights_file", type=str, required=False)
 
     # Training set up
