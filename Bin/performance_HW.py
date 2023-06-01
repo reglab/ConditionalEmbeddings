@@ -121,6 +121,6 @@ if __name__ == '__main__':
     args.results_dir = Path(__file__).parent / "results"
     args.eval_dir = Path(__file__).parent / "data" / "COHA" / "evaluation"
 
-    args.histwords_dir = '../Replication-Garg-2018/data/coha-word'
+    args.histwords_dir = '../../Replication-Garg-2018/data/coha-word'
 
     main(args)

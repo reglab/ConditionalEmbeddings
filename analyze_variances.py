@@ -58,14 +58,14 @@ def main(args):
         summary_df, x="log_median_freq", y='median_sd')
     #ax.set_ylim(0, 0.6)
     ax.set(xlabel='Median frequency (log)', ylabel='Median standard deviation')
-    ax.figure.savefig(os.path.join(args.output_dir,  "median_freq_sd.png"))
+    ax.figure.savefig(os.path.join(args.output_dir,  f"median_freq_sd_{args.run_id}.png"))
 
     plt.clf()
     ax = sns.scatterplot(
         summary_df, x="log_mean_freq", y='mean_sd')
     #ax.set_ylim(0, 0.6)
     ax.set(xlabel='Mean frequency (log) across decades', ylabel='Mean standard deviation')
-    ax.figure.savefig(os.path.join(args.output_dir,  "mean_freq_sd.png"))
+    ax.figure.savefig(os.path.join(args.output_dir,  f"mean_freq_sd_{args.run_id}.png"))
 
     # Add data to W&B
     wandb.init(
