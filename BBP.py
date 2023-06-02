@@ -77,8 +77,8 @@ class ConditionalBBP(nn.Module):
         if args.initialize == "word2vec":
             nn.init.uniform_(self.out_embed.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
             nn.init.uniform_(self.in_embed.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
-            nn.init.uniform_(self.out_rho.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
-            nn.init.uniform_(self.in_rho.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
+            nn.init.uniform_(self.out_rho.weight, a=-0.5, b=0.5)
+            nn.init.uniform_(self.in_rho.weight, a=-0.5, b=0.5)
             if self.no_mlp_layer is False:
                 nn.init.uniform_(self.covariates.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
 
