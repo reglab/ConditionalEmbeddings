@@ -7,6 +7,7 @@ from gensim import utils, matutils, logging
 import itertools
 from six import string_types
 from numpy import ndarray, float32 as REAL, array, dot, sqrt, newaxis
+from numpy.random import normal as np_normal
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,7 @@ def most_similar_pairdirection(
 
 def evaluate_word_analogies_multiple(
         model, analogies, restrict_vocab=300000, case_insensitive=True,
-        dummy4unknown=False, method='3COSADD', top_threshold=5):
+        dummy4unknown=False, method='3COSADD', top_threshold=5, sds=None, scaling=None):
     """Compute performance of the model on an analogy test set.
 
     The accuracy is reported (printed to log and returned as a score) for each section separately,
@@ -117,6 +118,8 @@ def evaluate_word_analogies_multiple(
 
     if top_threshold > 100:
         raise Exception('Threshold should be <= 100, or adjust number of pairs returned in sims.')
+    if restrict_vocab:
+        raise Exception('Not implemented')
 
     ok_keys = model.index_to_key[:restrict_vocab]
     #ok_keys = [k for k in ok_keys if k is not None]
@@ -158,9 +161,24 @@ def evaluate_word_analogies_multiple(
                         logger.debug("Skipping line #%i with OOV words: %s", line_no, line.strip())
                     continue
                 original_key_to_index = model.key_to_index
+                original_vectors = model.vectors
                 model.key_to_index = ok_vocab
                 ignore = {a, b, c}  # input words to be ignored
                 predicted_list = []
+
+                # Sample embeddings if standard deviations are provided
+                if sds:
+                    # ok_keys are the keys included in the decade's vocab
+                    sds_idx = [sds.key_to_index[w] for w in ok_keys]
+                    sds_reordered = sds.vectors[sds_idx, :]  # sd vectors ordered per model.vectors
+
+                    # Sample (V, D) of N(0, 1)
+                    sampled_posteriors = np_normal(size=sds_reordered.shape)
+                    sampled_posteriors *= sds_reordered
+                    sampled_posteriors *= scaling
+                    sampled_posteriors += model.vectors
+                    model.vectors = sampled_posteriors
+                    model.fill_norms(force=True)
 
                 if method == '3COSADD':
                     sims = model.most_similar(
@@ -175,6 +193,8 @@ def evaluate_word_analogies_multiple(
                     raise Exception('Check analogy method.')
 
                 model.key_to_index = original_key_to_index
+                model.vectors = original_vectors
+                model.fill_norms(force=True)
 
                 # Compute accuracy
                 for element in sims:

@@ -192,6 +192,7 @@ if __name__ == "__main__":
     parser.add_argument("-num_batches", type=int, required=False)
     parser.add_argument("-similarity", type=str, default='dot_product', choices=['dot_product', 'cosine'])
     parser.add_argument("-no_mlp_layer", type=bool, default=False)
+    parser.add_argument("-scale_priorsigmas", type=bool, default=False)
 
     # Bayesian params
     parser.add_argument("-prior_weight", type=float, default=0.5)
@@ -234,5 +235,10 @@ if __name__ == "__main__":
     if args.cuda:
         torch.cuda.manual_seed(args.seed)
         print("Using CUDA...")
+
+    # Scale the priors as well so they're on the same order
+    if args.initialize == "word2vec" and args.scale_priorsigmas == True:
+        args.sigma_1 /= args.emb
+        args.sigma_2 /= args.emb
 
     main(args)
