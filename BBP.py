@@ -109,11 +109,11 @@ class ConditionalBBP(nn.Module):
 
     def compute_prior(self, w):
         n1 = (
-                self.pr_w * (-(w ** 2) / (2 * self.s1 ** 2)).exp()
+                self.pr_w * (-(w ** 2) / (2 * self.s1 ** 2)).exp() / self.s1
         )  # /(math.sqrt(2*math.pi)*self.s1)
         n2 = (1 - self.pr_w) * (
                 -(w ** 2) / (2 * self.s2 ** 2)
-        ).exp()  # /(math.sqrt(2*math.pi)*self.s2)
+        ).exp() / self.s2  # /(math.sqrt(2*math.pi)*self.s2)
         return (n1 + n2).log().sum(1)
 
     def forward(self, inputs, outputs, covars, wt, batch_num):
