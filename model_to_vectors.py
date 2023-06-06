@@ -31,6 +31,7 @@ def load_model(model_path: str, vocab_path: str) -> ConditionalBBP:
         args_cp['similarity'] = None
         args_cp['initialize'] = None
         args_cp['no_mlp_layer'] = False
+        args_cp['save_step_weights'] = False
         model = ConditionalBBP(len(vocab), torch_model["args"].emb, Namespace(**args_cp))
 
     model.load_state_dict(torch_model["state_dict"])

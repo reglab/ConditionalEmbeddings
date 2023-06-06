@@ -1,5 +1,6 @@
 import argparse
 import csv
+import os
 import time
 from pathlib import Path
 import wandb
@@ -124,6 +125,27 @@ def main(args):
             wandb.log({"Step loss": curr_loss, 'Epoch': epoch, 'step': i,
                        'Learning rate': step_lr})
 
+            if args.save_step_weights == True:
+                if i % int(n_batch / 250) == 0 and i > 1000:
+                    # Save step for convergence analysis
+                    if args.optim == 'adagrad' or args.no_mlp_layer == True:
+                        opt_state_dict = optimizer.state_dict()
+                    elif args.optim == 'adam':
+                        opt_state_dict = optimizer.optimizers[0].state_dict()
+
+                    os.makedirs(args.saveto / f"model_steps_{args.file_stamp}_{args.run_id}", exist_ok=True)
+                    save_checkpoint(
+                        state={
+                            "epoch": epoch + 1,
+                            "step": i + 1,
+                            "args": args,
+                            "state_dict": model.state_dict(),
+                            "optimizer": opt_state_dict,
+                        },
+                        is_best=True,
+                        filename=args.saveto / f"model_steps_{args.file_stamp}_{args.run_id}" / f"model_e{epoch+1}_s{i+1}.pth.tar",
+                    )
+
         ave_loss = total_loss / n_batch
         print("average loss is: %s" % str(ave_loss))
         losses.append(ave_loss)
@@ -209,6 +231,7 @@ if __name__ == "__main__":
     # Training set up
     parser.add_argument("-cuda", type=bool, default=False)
     parser.add_argument("-load_model", type=float, default=False)
+    parser.add_argument("-save_step_weights", type=bool, default=False)
 
     args = parser.parse_args()
 
