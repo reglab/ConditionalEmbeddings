@@ -34,7 +34,8 @@ def compute_rhat(chains_means, chains_vars, N):
     B = np.power(np.std(chains_means, axis=0), 2) * N * M / (M - 1)
 
     # Rhat
-    rhat = (N-1) / N * W + B / N
+    var = (N-1) / N * W + B / N
+    rhat = np.sqrt(var / W)
     return rhat
 
 
