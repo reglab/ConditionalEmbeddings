@@ -132,7 +132,7 @@ if __name__ == '__main__':
     parser.add_argument("-run_location", type=str, choices=['local', 'sherlock'])
     parser.add_argument("-base_dir", type=str)
     parser.add_argument("-param_group", type=str, choices=['means', 'rho', 'covar'])
-    parser.add_argument("-K", type=int, default=50)
+    parser.add_argument("-K", type=int, default=0)
 
     args = parser.parse_args()
 
@@ -144,7 +144,7 @@ if __name__ == '__main__':
         raise Exception('[ERROR] Needs to be run on Sherlock (scratch) due to storage requirements.')
         # args.base_dir = Path(__file__).parent
 
-    args.output_dir = args.models_dir / '..' / "Processed" / args.rhat_group
+    args.output_dir = args.models_dir.resolve().parents[0] / "Processed" / args.rhat_group
     args.output_dir.mkdir(exist_ok=True)
 
     main(args)
