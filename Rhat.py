@@ -53,6 +53,9 @@ def main(args):
     K_name = 0 if args.param_group == 'covar' else args.K
     truncations = 1 if args.param_group == 'covar' else 4
 
+    print(f'[INFO] Number of chains: {M}')
+    print(f'[INFO] Number of iterations: {N}')
+
     # Get statistics for each chain
     print('[INFO] Getting statistics for each truncated chain')
     for m, chain in tqdm(enumerate(chains)):
@@ -68,7 +71,7 @@ def main(args):
 
         # Define chain array
         chain_a = np.zeros((N, W_sub, 300))
-        for n, model_file in enumerate(models_files):
+        for n, model_file in tqdm(enumerate(models_files)):
             # Load model and truncate
             model = load_model(
                 model_file,
