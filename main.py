@@ -209,7 +209,7 @@ if __name__ == "__main__":
     parser.add_argument("-lr", type=float, default=0.05)
     parser.add_argument("-skips", type=int, default=3)
     parser.add_argument("-negs", type=int, default=6)
-    parser.add_argument("-initialize", type=str, default='BBB', choices=['kaiming', 'word2vec', 'BBB'])
+    parser.add_argument("-initialize", type=str, default='BBB', choices=['kaiming', 'word2vec', 'BBB', 'normal_rho'])
     parser.add_argument("-optim", type=str, default='adagrad', choices=['adagrad', 'adam'])
     parser.add_argument("-num_batches", type=int, required=False)
     parser.add_argument("-similarity", type=str, default='dot_product', choices=['dot_product', 'cosine'])

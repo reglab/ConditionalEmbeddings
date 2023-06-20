@@ -82,6 +82,13 @@ class ConditionalBBP(nn.Module):
             if self.no_mlp_layer is False:
                 nn.init.uniform_(self.covariates.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
 
+        if args.intialize == 'normal_rho':
+            nn.init.uniform_(self.out_embed.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
+            nn.init.uniform_(self.in_embed.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
+            nn.init.normal_(self.out_rho.weight, mean=0, std=1.0)
+            nn.init.normal_(self.in_rho.weight, mean=0, std=1.0)
+            if self.no_mlp_layer is False:
+                nn.init.uniform_(self.covariates.weight, a=-0.5 / args.emb, b=0.5 / args.emb)
 
         self.weights = weights
         if self.weights is not None:
